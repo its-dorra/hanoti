@@ -1,8 +1,9 @@
 import * as React from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { OrdersPresenter, type OrderStatusFilter } from './orders-presenter'
 import type { Order } from '../../../../../shared/schemas/order.schema'
 import { orpc } from '@renderer/integrations/orpc'
+import { useIntersectionObserver } from '../../../hooks/use-intersection-observer'
 
 interface OrdersContainerProps {
   /** When set (e.g. embedded on a client's own orders page), filters to that client and hides the name search. */
@@ -15,40 +16,30 @@ export function OrdersContainer({ clientId }: OrdersContainerProps) {
   const [dateFrom, setDateFrom] = React.useState('')
   const [dateTo, setDateTo] = React.useState('')
 
-  // Fetched once regardless of scope: builds the clientId -> name map used
-  // to show real names in the table, and (on the unscoped /orders page)
-  // doubles as the source for the "search by client name" filter — no
-  // backend join/aggregation needed for either.
-  const { data: clients } = useQuery(orpc.clients.list.queryOptions({ input: { query: '' } }))
-  const clientNameById = React.useMemo(
-    () => new Map((clients ?? []).map((c) => [c.id, c.name])),
-    [clients]
-  )
-
-  const {
-    data: orders,
-    isLoading,
-    isError
-  } = useQuery(
-    orpc.orders.list.queryOptions({
-      input: {
-        clientId,
-        status: statusFilter === 'all' ? undefined : statusFilter,
-        dateFrom: dateFrom ? new Date(dateFrom) : undefined,
-        dateTo: dateTo ? new Date(dateTo) : undefined
-      }
-    })
-  )
-
-  const filteredOrders = React.useMemo(() => {
-    if (!orders) return []
-    const trimmedQuery = clientNameQuery.trim().toLowerCase()
-    if (!trimmedQuery) return orders
-    const matchingClientIds = new Set(
-      (clients ?? []).filter((c) => c.name.toLowerCase().includes(trimmedQuery)).map((c) => c.id)
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
+    useInfiniteQuery(
+      orpc.orders.list.infiniteOptions({
+        input: (pageParam) => ({
+          clientId,
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          dateFrom: dateFrom ? new Date(dateFrom) : undefined,
+          dateTo: dateTo ? new Date(dateTo) : undefined,
+          cursor: pageParam,
+          limit: 20
+        }),
+        initialPageParam: null as any,
+        getNextPageParam: (lastPage) => lastPage.nextCursor
+      })
     )
-    return orders.filter((order) => matchingClientIds.has(order.clientId))
-  }, [orders, clients, clientNameQuery])
+
+  const orders = React.useMemo(() => {
+    return data?.pages.flatMap((page) => page.items) ?? []
+  }, [data])
+
+  const loadMoreRef = useIntersectionObserver({
+    onIntersect: fetchNextPage,
+    enabled: hasNextPage && !isFetchingNextPage
+  })
 
   async function handlePrintClick(order: Order) {
     // One-off imperative call outside of a hook — `.call()` invokes the
@@ -67,10 +58,13 @@ export function OrdersContainer({ clientId }: OrdersContainerProps) {
 
   return (
     <OrdersPresenter
-      orders={filteredOrders}
+      orders={orders}
       isLoading={isLoading}
+      isFetchingNextPage={isFetchingNextPage}
+      hasNextPage={hasNextPage}
+      loadMoreRef={loadMoreRef}
       onPrintClick={handlePrintClick}
-      clientNameById={clientNameById}
+
       showClientSearch={!clientId}
       clientNameQuery={clientNameQuery}
       onClientNameQueryChange={setClientNameQuery}

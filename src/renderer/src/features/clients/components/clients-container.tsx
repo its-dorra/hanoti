@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { ClientsPresenter } from './clients-presenter'
 import { ClientFormDialog } from './client-form-dialog'
 import {
@@ -15,6 +15,7 @@ import {
 import { useDeleteClient } from '../hooks/use-delete-client'
 import type { Client } from '../../../../../shared/schemas/client.schema'
 import { orpc } from '@renderer/integrations/orpc'
+import { useIntersectionObserver } from '../../../hooks/use-intersection-observer'
 
 export function ClientsContainer() {
   const [searchQuery, setSearchQuery] = React.useState('')
@@ -26,15 +27,27 @@ export function ClientsContainer() {
 
   // Queries are called directly in the component per the architecture's
   // data-fetching rule — no custom query hooks, only mutation hooks.
-  // `orpc.clients.list.queryOptions({ input })` gives useQuery full type
-  // inference on both the input and the returned data, plus a
-  // consistently-shaped cache key (see orpc.clients.key() in the mutation
-  // hooks' invalidation).
-  const {
-    data: clients,
-    isLoading,
-    isError
-  } = useQuery(orpc.clients.list.queryOptions({ input: { query: searchQuery } }))
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
+    useInfiniteQuery(
+      orpc.clients.list.infiniteOptions({
+        input: (pageParam) => ({
+          query: searchQuery,
+          cursor: pageParam,
+          limit: 20
+        }),
+        initialPageParam: null as any,
+        getNextPageParam: (lastPage) => lastPage.nextCursor
+      })
+    )
+
+  const clients = React.useMemo(() => {
+    return data?.pages.flatMap((page) => page.items) ?? []
+  }, [data])
+
+  const loadMoreRef = useIntersectionObserver({
+    onIntersect: fetchNextPage,
+    enabled: hasNextPage && !isFetchingNextPage
+  })
 
   function handleCreateClick() {
     setEditingClient(undefined)
@@ -59,8 +72,11 @@ export function ClientsContainer() {
   return (
     <>
       <ClientsPresenter
-        clients={clients ?? []}
+        clients={clients}
         isLoading={isLoading}
+        isFetchingNextPage={isFetchingNextPage}
+        hasNextPage={hasNextPage}
+        loadMoreRef={loadMoreRef}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         onCreateClick={handleCreateClick}

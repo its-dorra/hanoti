@@ -1,29 +1,29 @@
 import { sql } from 'drizzle-orm'
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core'
 
 // ---------------------------------------------------------------------------
 // MODULE 1 — Grocery Store Management
 // ---------------------------------------------------------------------------
 
-export const clients = sqliteTable('clients', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull(),
-  phone: text('phone'),
-  address: text('address'),
-  notes: text('notes'),
-  // Running balance, maintained incrementally rather than computed with
-  // SUM() over orders/payments on every read:
-  //   - order creation:  debt += order.subtotal
-  //   - payment recorded: debt -= payment.amount
-  // A positive value is money owed to the store; negative is store credit.
-  debt: real('debt').notNull().default(0),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`)
-})
+export const clients = sqliteTable(
+  'clients',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    phone: text('phone'),
+    notes: text('notes'),
+    debt: real('debt').notNull().default(0),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`)
+  },
+  (table) => ({
+    nameIdIdx: index('clients_name_id_idx').on(table.name, table.id)
+  })
+)
 
 export const products = sqliteTable('products', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -51,27 +51,33 @@ export const productPrices = sqliteTable('product_prices', {
   amount: real('amount').notNull()
 })
 
-export const orders = sqliteTable('orders', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  // Stable, human-readable, sequential invoice number (separate from PK)
-  invoiceNumber: integer('invoice_number').notNull(),
-  clientId: integer('client_id')
-    .notNull()
-    .references(() => clients.id),
-  orderDate: integer('order_date', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  status: text('status', { enum: ['open', 'cancelled'] })
-    .notNull()
-    .default('open'),
-  subtotal: real('subtotal').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`)
-})
+export const orders = sqliteTable(
+  'orders',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    // Stable, human-readable, sequential invoice number (separate from PK)
+    invoiceNumber: integer('invoice_number').notNull(),
+    clientId: integer('client_id')
+      .notNull()
+      .references(() => clients.id),
+    orderDate: integer('order_date', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    status: text('status', { enum: ['open', 'cancelled'] })
+      .notNull()
+      .default('open'),
+    subtotal: real('subtotal').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`)
+  },
+  (table) => ({
+    orderDateIdIdx: index('orders_order_date_id_idx').on(table.orderDate, table.id)
+  })
+)
 
 export const orderItems = sqliteTable('order_items', {
   id: integer('id').primaryKey({ autoIncrement: true }),

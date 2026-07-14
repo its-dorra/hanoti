@@ -5,15 +5,45 @@ export function containsArabic(text: string): boolean {
   return ARABIC_CHAR_PATTERN.test(text)
 }
 
+const ARABIC_LETTER_RE =
+  /[\u0621-\u064A\u0660-\u0669\u066E-\u06D3\u06D5-\u06FF\uFB50-\uFDFF\uFE70-\uFEFF]/
+
 export function shapeArabicLine(text: string): string {
   if (!containsArabic(text)) return text
 
   const words = text.trim().split(/\s+/).filter(Boolean)
   if (words.length <= 1) return text
 
-  return words.reverse().join(' ')
-}
+  const isArabicWord = (w: string) => ARABIC_LETTER_RE.test(w)
 
+  // Group into contiguous runs of the same direction. Only words *within*
+  // an Arabic run are reversed against each other — runs are never
+  // reversed against one another. (Globally reversing every Arabic word
+  // position and redistributing them breaks as soon as Arabic segments
+  // are non-contiguous, e.g. split by a French product name.)
+  type Run = { isArabic: boolean; start: number; end: number } // [start, end)
+  const runs: Run[] = []
+  for (let i = 0; i < words.length; i++) {
+    const arabic = isArabicWord(words[i])
+    const last = runs[runs.length - 1]
+    if (last && last.isArabic === arabic) {
+      last.end = i + 1
+    } else {
+      runs.push({ isArabic: arabic, start: i, end: i + 1 })
+    }
+  }
+
+  const result = [...words]
+  for (const run of runs) {
+    if (!run.isArabic) continue
+    const reversed = words.slice(run.start, run.end).reverse()
+    reversed.forEach((w, k) => {
+      result[run.start + k] = w
+    })
+  }
+
+  return result.join('  ')
+}
 /** Splits `word` into the fewest chunks that each fit within `maxWidth`. */
 function breakLongWord(
   word: string,
@@ -75,5 +105,5 @@ export function wrapAndShapeArabic(
   }
   flushCurrentLine()
 
-  return lines
+  return lines.map(shapeArabicLine)
 }

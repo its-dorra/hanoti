@@ -16,5 +16,5 @@ import { createDb } from './client'
  * yet in this scaffold — run `db:generate` first.)
  */
 const db = createDb('./dev.db')
-migrate(db, { migrationsFolder: './drizzle' })
+migrate(db, { migrationsFolder: './src/main/db/migrations' })
 console.log('Migrations applied to ./dev.db')

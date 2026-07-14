@@ -150,42 +150,44 @@ export function generateInvoicePdf(
       return drawTableHeader(doc.page.margins.top)
     }
 
-    function drawInvoiceInfo(y: number): number {
-      const INFO_LABEL_WIDTH = 120
-      const INFO_VALUE_WIDTH = fullWidth - INFO_LABEL_WIDTH
-      const INFO_ROW_HEIGHT = 24
-      let currentY = y
-      doc.fontSize(20)
-      doc.text(shapeArabicLine('رقم الفاتورة'), pageLeft + INFO_VALUE_WIDTH, currentY, {
-        width: INFO_LABEL_WIDTH,
-        align: 'right'
-      })
-      doc.text(order.invoiceNumber.toString().slice(0, 10), pageLeft, currentY, {
-        width: INFO_VALUE_WIDTH,
-        align: 'right'
-      })
-      currentY += INFO_ROW_HEIGHT
-      const orderDate = new Date(order.orderDate)
-      const formattedDate = `${orderDate.getFullYear()}/${String(orderDate.getMonth() + 1).padStart(2, '0')}/${String(orderDate.getDate()).padStart(2, '0')}`
-      doc.fontSize(10)
-      doc.text(shapeArabicLine('التاريخ'), pageLeft + INFO_VALUE_WIDTH, currentY, {
-        width: INFO_LABEL_WIDTH,
-        align: 'right'
-      })
-      doc.text(formattedDate, pageLeft, currentY, { width: INFO_VALUE_WIDTH, align: 'right' })
-      return currentY + INFO_ROW_HEIGHT
-    }
-
     function startPlainContinuationPage(): number {
       doc.addPage()
       disableAutoPageBreak(doc)
       doc.font(ARABIC_FONT)
-      return drawInvoiceInfo(doc.page.margins.top) + 8
+      const top = doc.page.margins.top
+      doc.fontSize(9).fillColor('#666666')
+
+      doc.text(shapeArabicLine(`فاتورة رقم`), pageLeft, top, {
+        width: fullWidth / 3,
+        align: 'right'
+      })
+      doc.text(shapeArabicLine(`${order.invoiceNumber.toString().slice(0, 10)})`), pageLeft, top, {
+        width: (2 * fullWidth) / 3,
+        align: 'right'
+      })
+      doc.fillColor('black').fontSize(10)
+      return top + 18
     }
 
     // ---- Header (page 1 only) ---------------------------------------------
 
-    doc.y = drawInvoiceInfo(doc.y)
+    doc.fontSize(20)
+    doc.text(shapeArabicLine(`رقم الفاتورة:`), pageLeft, doc.y, {
+      width: fullWidth / 3,
+      align: 'right'
+    })
+    doc.text(shapeArabicLine(`${order.invoiceNumber.toString().slice(0, 10)}`), pageLeft, doc.y, {
+      width: (2 * fullWidth) / 3,
+      align: 'right'
+    })
+
+    const orderDate = new Date(order.orderDate)
+    const formattedDate = `${orderDate.getFullYear()}/${String(orderDate.getMonth() + 1).padStart(2, '0')}/${String(orderDate.getDate()).padStart(2, '0')}`
+    doc.fontSize(10)
+    doc.text(shapeArabicLine(`${formattedDate}التاريخ : `), pageLeft, doc.y, {
+      width: fullWidth,
+      align: 'right'
+    })
     doc.moveDown()
 
     doc.fontSize(12)

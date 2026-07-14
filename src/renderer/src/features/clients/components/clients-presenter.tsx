@@ -16,6 +16,9 @@ import type { Client } from '../../../../../shared/schemas/client.schema'
 interface ClientsPresenterProps {
   clients: Client[]
   isLoading: boolean
+  isFetchingNextPage: boolean
+  hasNextPage: boolean
+  loadMoreRef: React.RefObject<HTMLElement>
   searchQuery: string
   onSearchChange: (query: string) => void
   onCreateClick: () => void
@@ -26,6 +29,9 @@ interface ClientsPresenterProps {
 export function ClientsPresenter({
   clients,
   isLoading,
+  isFetchingNextPage,
+  hasNextPage,
+  loadMoreRef,
   searchQuery,
   onSearchChange,
   onCreateClick,
@@ -61,7 +67,6 @@ export function ClientsPresenter({
             <TableRow>
               <TableHead>الاسم</TableHead>
               <TableHead>الهاتف</TableHead>
-              <TableHead>العنوان</TableHead>
               <TableHead className="w-24 text-end">الإجراءات</TableHead>
             </TableRow>
           </TableHeader>
@@ -81,29 +86,41 @@ export function ClientsPresenter({
                 </TableCell>
               </TableRow>
             ) : (
-              clients.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell className="font-medium">
-                    <Link
-                      to="/clients/$clientId"
-                      params={{ clientId: String(client.id) }}
-                      className="hover:underline"
+              <>
+                {clients.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">
+                      <Link
+                        to="/clients/$clientId"
+                        params={{ clientId: String(client.id) }}
+                        className="hover:underline"
+                      >
+                        {client.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{client.phone ?? '—'}</TableCell>
+
+                    <TableCell className="text-end">
+                      <Button variant="ghost" size="icon" onClick={() => onEditClick(client)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => onDeleteClick(client)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {hasNextPage && (
+                  <TableRow ref={loadMoreRef}>
+                    <TableCell
+                      colSpan={4}
+                      className="py-4 text-center text-muted-foreground text-sm"
                     >
-                      {client.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{client.phone ?? '—'}</TableCell>
-                  <TableCell>{client.address ?? '—'}</TableCell>
-                  <TableCell className="text-end">
-                    <Button variant="ghost" size="icon" onClick={() => onEditClick(client)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => onDeleteClick(client)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+                      {isFetchingNextPage ? 'جاري تحميل المزيد...' : 'تحميل المزيد'}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </>
             )}
           </TableBody>
         </Table>

@@ -5,7 +5,9 @@ import type {
   CreateClientInput,
   UpdateClientInput,
   Client,
-  ClientBalance
+  ClientBalance,
+  ClientCursor,
+  PaginatedClients
 } from '../../../shared/schemas/client.schema'
 import type { AppDb } from '../../db/client'
 
@@ -21,10 +23,24 @@ import type { AppDb } from '../../db/client'
 export class ClientsService {
   constructor(private readonly dataAccess: ClientsDataAccess) {}
 
-  async list(query: string): Promise<Result<Client[], AppError>> {
+  async list(input: {
+    query: string
+    cursor?: ClientCursor | null
+    limit?: number
+  }): Promise<Result<PaginatedClients, AppError>> {
     try {
-      const rows = await this.dataAccess.findAll(query)
-      return Result.ok(rows)
+      const rows = await this.dataAccess.findAll(input.query, input.cursor, input.limit)
+      if (input.limit !== undefined) {
+        const hasNextPage = rows.length > input.limit
+        const items = hasNextPage ? rows.slice(0, input.limit) : rows
+        const nextCursor =
+          hasNextPage && items.length > 0
+            ? { createdAt: items[items.length - 1].createdAt, id: items[items.length - 1].id }
+            : null
+        return Result.ok({ items, nextCursor })
+      } else {
+        return Result.ok({ items: rows, nextCursor: null })
+      }
     } catch (cause) {
       return Result.err(new DatabaseError({ message: 'Failed to list clients', cause }))
     }

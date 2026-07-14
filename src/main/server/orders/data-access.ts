@@ -1,7 +1,7 @@
-import { and, desc, eq, gte, lte, sql } from 'drizzle-orm'
+import { and, desc, eq, gte, lte, sql, or, lt } from 'drizzle-orm'
 import type { AppDb } from '../../db/client'
-import { orders, orderItems } from '../../db/schema'
-import type { OrderFilterInput } from '../../shared/schemas/order.schema'
+import { orders, orderItems, clients } from '../../db/schema'
+import type { OrderFilterInput } from '../../../shared/schemas/order.schema'
 
 export interface NewOrderItemRow {
   productId: number
@@ -40,27 +40,43 @@ export class OrdersDataAccess {
   constructor(private readonly db: AppDb) {}
 
   async findAll(filter: OrderFilterInput) {
+    const limit = filter.limit ?? 20
+    const cursor = filter.cursor
+
     return this.db
-      .select(ORDER_COLUMNS)
+      .select({ ...ORDER_COLUMNS, clientName: clients.name })
       .from(orders)
       .where(
         and(
           filter.clientId ? eq(orders.clientId, filter.clientId) : undefined,
           filter.status ? eq(orders.status, filter.status) : undefined,
           filter.dateFrom ? gte(orders.orderDate, filter.dateFrom) : undefined,
-          filter.dateTo ? lte(orders.orderDate, filter.dateTo) : undefined
+          filter.dateTo ? lte(orders.orderDate, filter.dateTo) : undefined,
+          cursor
+            ? or(
+                lt(orders.orderDate, cursor.orderDate),
+                and(eq(orders.orderDate, cursor.orderDate), lt(orders.id, cursor.id))
+              )
+            : undefined
         )
       )
-      .orderBy(desc(orders.orderDate))
+      .innerJoin(clients, eq(orders.clientId, clients.id))
+      .orderBy(desc(orders.orderDate), desc(orders.id))
+      .limit(limit + 1)
   }
 
   async findByIdWithItems(id: number) {
-    const [order] = await this.db.select(ORDER_COLUMNS).from(orders).where(eq(orders.id, id))
+    const [order] = await this.db
+      .select({ ...ORDER_COLUMNS, clientName: clients.name })
+      .from(orders)
+      .where(eq(orders.id, id))
+      .innerJoin(clients, eq(orders.clientId, clients.id))
     if (!order) return null
     const items = await this.db
-      .select(ORDER_ITEM_COLUMNS)
+      .select({ ...ORDER_ITEM_COLUMNS })
       .from(orderItems)
       .where(eq(orderItems.orderId, id))
+
     return { ...order, items }
   }
 

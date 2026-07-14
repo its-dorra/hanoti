@@ -1,7 +1,11 @@
-import { eq, like, sql } from 'drizzle-orm'
+import { eq, like, sql, and, or, lt, desc } from 'drizzle-orm'
 import type { AppDb } from '../../db/client'
 import { clients } from '../../db/schema'
-import type { CreateClientInput, UpdateClientInput } from '../../../shared/schemas/client.schema'
+import type {
+  CreateClientInput,
+  UpdateClientInput,
+  ClientCursor
+} from '../../../shared/schemas/client.schema'
 
 /**
  * Data-access layer for clients. Database operations only — no business
@@ -24,7 +28,6 @@ const CLIENT_COLUMNS = {
   id: clients.id,
   name: clients.name,
   phone: clients.phone,
-  address: clients.address,
   notes: clients.notes,
   debt: clients.debt,
   createdAt: clients.createdAt,
@@ -34,12 +37,27 @@ const CLIENT_COLUMNS = {
 export class ClientsDataAccess {
   constructor(private readonly db: AppDb) {}
 
-  async findAll(query: string) {
-    return this.db
+  async findAll(query: string, cursor?: ClientCursor | null, limit?: number) {
+    const queryLimit = limit ?? 20
+
+    const q = this.db
       .select(CLIENT_COLUMNS)
       .from(clients)
-      .where(query ? like(clients.name, `%${query}%`) : undefined)
-      .orderBy(clients.name)
+      .where(
+        and(
+          query ? like(clients.name, `%${query}%`) : undefined,
+          cursor
+            ? or(
+                lt(clients.createdAt, cursor.createdAt),
+                and(eq(clients.createdAt, cursor.createdAt), lt(clients.id, cursor.id))
+              )
+            : undefined
+        )
+      )
+      .orderBy(desc(clients.createdAt), desc(clients.id))
+      .limit(queryLimit + 1)
+
+    return q
   }
 
   async findById(id: number) {
@@ -53,7 +71,7 @@ export class ClientsDataAccess {
       .values({
         name: input.name,
         phone: input.phone ?? null,
-        address: input.address ?? null,
+       
         notes: input.notes ?? null
       })
       .returning(CLIENT_COLUMNS)

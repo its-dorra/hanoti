@@ -19,7 +19,7 @@ import { z } from 'zod'
  */
 export const clientsRouter = os.router({
   list: os.input(ClientSearchSchema).handler(async ({ input, context }) => {
-    const result = await context.services.clients.list(input.query)
+    const result = await context.services.clients.list(input)
     return result.match({
       ok: (clients) => clients,
       err: (e) => {

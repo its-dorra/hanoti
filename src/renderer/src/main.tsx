@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client'
 import { RouterProvider, createMemoryHistory, createRouter } from '@tanstack/react-router'
 import './styles.css'
 
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'
 import { queryClient } from './integrations/tanstack-query'
@@ -31,6 +33,7 @@ if (!rootElement.innerHTML) {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
+          <ReactQueryDevtools />
           <RouterProvider router={router} />
         </ThemeProvider>
       </QueryClientProvider>

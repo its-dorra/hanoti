@@ -15,7 +15,8 @@ import type {
   CreateOrderInput,
   UpdateOrderInput,
   OrderFilterInput,
-  Order
+  Order,
+  PaginatedOrders
 } from '../../../shared/schemas/order.schema'
 
 interface ResolvedItem extends NewOrderItemRow {
@@ -40,10 +41,20 @@ export class OrdersService {
     private readonly paymentsService: PaymentsService
   ) {}
 
-  async list(filter: OrderFilterInput): Promise<Result<Order[], AppError>> {
+  async list(filter: OrderFilterInput): Promise<Result<PaginatedOrders, AppError>> {
     try {
+      const limit = filter.limit ?? 20
       const rows = await this.dataAccess.findAll(filter)
-      return Result.ok(rows.map((row) => ({ ...row, items: [] })))
+      const hasNextPage = rows.length > limit
+      const rawItems = hasNextPage ? rows.slice(0, limit) : rows
+      const items = rawItems.map((row) => ({ ...row, items: [] }))
+
+      const nextCursor =
+        hasNextPage && items.length > 0
+          ? { orderDate: items[items.length - 1].orderDate, id: items[items.length - 1].id }
+          : null
+
+      return Result.ok({ items, nextCursor })
     } catch (cause) {
       return Result.err(new DatabaseError({ message: 'Failed to list orders', cause }))
     }
@@ -101,19 +112,7 @@ export class OrdersService {
     return Result.ok(resolved)
   }
 
-  /**
-   * Creates an order end-to-end: validates the client and every line item,
-   * snapshots product names/prices onto the order (so later edits or
-   * deletions to the product never alter a printed invoice), decrements
-   * stock (floored at 0, never negative — an order exceeding stock is
-   * still allowed to save), increases the client's `debt` by the order
-   * subtotal, and — if a deposit was entered — records it as a separate
-   * Payment row sharing this order's exact creation timestamp.
-   *
-   * All writes happen in a single DB transaction: if any step fails,
-   * nothing is committed.
-   */
-  async createOrder(input: CreateOrderInput): Promise<Result<Order, AppError>> {
+  async createOrder(input: CreateOrderInput) {
     if (input.items.length === 0) return Result.err(new EmptyOrderError({}))
 
     const clientResult = await this.clientsService.getById(input.clientId)

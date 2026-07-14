@@ -6,6 +6,7 @@ import {
   OrderFilterSchema
 } from '../../../shared/schemas/order.schema'
 import { generateInvoicePdf } from './invoices/generate-invoice'
+import { Result } from 'better-result'
 
 export const ordersRouter = os.router({
   list: os.input(OrderFilterSchema).handler(async ({ input, context }) => {
@@ -30,7 +31,7 @@ export const ordersRouter = os.router({
 
   create: os.input(CreateOrderSchema).handler(async ({ input, context }) => {
     const result = await context.services.orders.createOrder(input)
-    return result.match({
+    return Result.match(result, {
       ok: (v) => v,
       err: (e) => {
         throw context.toORPCError(e)
@@ -48,18 +49,6 @@ export const ordersRouter = os.router({
     })
   }),
 
-  /**
-   * Returns the invoice as a base64-encoded PDF (ORPC's IPC-over-JSON link
-   * can't stream raw binary well — the renderer decodes and either shows
-   * it in a preview pane or hands it to Electron's print API).
-   *
-   * The order itself carries no payment fields. The deposit shown on the
-   * invoice (if any) is looked up separately, by asking PaymentsService
-   * for whatever payment exact-matches the order's own `orderDate`
-   * timestamp — the same correlation-by-timestamp OrdersService used to
-   * write it in the first place. No `orderId` column on payments is ever
-   * involved.
-   */
   getInvoicePdf: os
     .input(z.object({ orderId: z.number().int() }))
     .handler(async ({ input, context }) => {

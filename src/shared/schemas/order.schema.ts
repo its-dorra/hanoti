@@ -25,6 +25,7 @@ export const OrderSchema = z.object({
   subtotal: z.number().nonnegative(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
+  clientName: z.string(),
   items: z.array(OrderItemSchema).default([])
 })
 export type Order = z.infer<typeof OrderSchema>
@@ -65,18 +66,32 @@ export const CreateOrderSchema = z.object({
 })
 export type CreateOrderInput = z.infer<typeof CreateOrderSchema>
 
+export const OrderCursorSchema = z.object({
+  orderDate: z.coerce.date(),
+  id: z.number().int()
+})
+export type OrderCursor = z.infer<typeof OrderCursorSchema>
+
 export const OrderFilterSchema = z
   .object({
     clientId: z.number().int().positive().optional(),
     status: OrderStatusSchema.optional(),
     dateFrom: z.coerce.date().optional(),
-    dateTo: z.coerce.date().optional()
+    dateTo: z.coerce.date().optional(),
+    cursor: OrderCursorSchema.nullable().optional(),
+    limit: z.number().int().min(1).max(100).default(20)
   })
   .refine((v) => !v.dateFrom || !v.dateTo || v.dateFrom <= v.dateTo, {
     message: 'dateFrom must be before or equal to dateTo',
     path: ['dateTo']
   })
 export type OrderFilterInput = z.infer<typeof OrderFilterSchema>
+
+export const PaginatedOrdersSchema = z.object({
+  items: z.array(OrderSchema),
+  nextCursor: OrderCursorSchema.nullable()
+})
+export type PaginatedOrders = z.infer<typeof PaginatedOrdersSchema>
 
 export const UpdateOrderSchema = z.object({
   id: z.number().int().positive(),

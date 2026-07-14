@@ -70,8 +70,8 @@ export function ClientSearchSelect({ selectedClient, onSelect, onClear }: Client
         <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-background shadow-md">
           {isLoading ? (
             <p className="px-3 py-2 text-sm text-muted-foreground">جارٍ البحث...</p>
-          ) : clients && clients.length > 0 ? (
-            clients.map((client) => (
+          ) : clients && clients.items.length > 0 ? (
+            clients.items.map((client) => (
               <button
                 key={client.id}
                 type="button"

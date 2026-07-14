@@ -27,9 +27,11 @@ export type OrderStatusFilter = Order['status'] | 'all'
 interface OrdersPresenterProps {
   orders: Order[]
   isLoading: boolean
+  isFetchingNextPage: boolean
+  hasNextPage: boolean
+  loadMoreRef: React.RefObject<any>
   onPrintClick: (order: Order) => void
-  /** Maps clientId -> display name, so the table shows real names instead of "Client #N". */
-  clientNameById: Map<number, string>
+
   /** Hidden when this list is already scoped to one client (e.g. their own orders page). */
   showClientSearch: boolean
   clientNameQuery: string
@@ -50,8 +52,11 @@ const STATUS_LABEL: Record<Order['status'], string> = {
 export function OrdersPresenter({
   orders,
   isLoading,
+  isFetchingNextPage,
+  hasNextPage,
+  loadMoreRef,
   onPrintClick,
-  clientNameById,
+
   showClientSearch,
   clientNameQuery,
   onClientNameQueryChange,
@@ -156,32 +161,46 @@ export function OrdersPresenter({
                 </TableCell>
               </TableRow>
             ) : (
-              orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">#{order.invoiceNumber}</TableCell>
-                  <TableCell>
-                    <Link
-                      to="/clients/$clientId"
-                      params={{ clientId: String(order.clientId) }}
-                      className="hover:underline"
+              <>
+                {orders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">
+                      #{order.invoiceNumber.toString().slice(0, 10)}
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        to="/clients/$clientId"
+                        params={{ clientId: String(order.clientId) }}
+                        className="hover:underline"
+                      >
+                        {order.clientName}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{new Date(order.orderDate).toLocaleDateString('en-UK')}</TableCell>
+                    <TableCell>{formatCurrency(order.subtotal)}</TableCell>
+                    <TableCell>
+                      <Badge variant={order.status === 'cancelled' ? 'destructive' : 'secondary'}>
+                        {STATUS_LABEL[order.status]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-end">
+                      <Button variant="ghost" size="icon" onClick={() => onPrintClick(order)}>
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {hasNextPage && (
+                  <TableRow ref={loadMoreRef}>
+                    <TableCell
+                      colSpan={6}
+                      className="py-4 text-center text-muted-foreground text-sm"
                     >
-                      {clientNameById.get(order.clientId) ?? `عميل #${order.clientId}`}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{new Date(order.orderDate).toLocaleDateString('en-UK')}</TableCell>
-                  <TableCell>{formatCurrency(order.subtotal)}</TableCell>
-                  <TableCell>
-                    <Badge variant={order.status === 'cancelled' ? 'destructive' : 'secondary'}>
-                      {STATUS_LABEL[order.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-end">
-                    <Button variant="ghost" size="icon" onClick={() => onPrintClick(order)}>
-                      <Printer className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+                      {isFetchingNextPage ? 'جاري تحميل المزيد...' : 'تحميل المزيد'}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </>
             )}
           </TableBody>
         </Table>

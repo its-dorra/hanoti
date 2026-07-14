@@ -189,7 +189,7 @@ export function CreateOrderDialog({ open, onOpenChange, defaultClientId }: Creat
                     <SelectValue placeholder="اختر عميلاً" />
                   </SelectTrigger>
                   <SelectContent>
-                    {clients?.map((c) => (
+                    {clients?.items.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>
                         {c.name}
                       </SelectItem>
