@@ -21,7 +21,7 @@ export class DebtNotebookService {
   ) {}
 
   async list(
-    cursor?: { createdAt: Date; id: number },
+    cursor?: { createdAt: Date; id: number } | null,
     limit?: number
   ): Promise<Result<DebtEntryWithCursor, AppError>> {
     try {
@@ -45,9 +45,27 @@ export class DebtNotebookService {
 
   async listTransactions(
     debtEntryId: number,
-    cursor?: { createdAt: string; id: number },
+    cursor?: { createdAt: Date; id: number } | null,
     limit?: number
-  ) {}
+  ) {
+    try {
+      const rows = await this.dataAccess.findAllTransactions(debtEntryId, cursor, limit)
+      if (limit !== undefined) {
+        const hasNextPage = rows.length > limit
+
+        const items = hasNextPage ? rows.slice(0, limit) : rows
+
+        const nextCursor =
+          hasNextPage && items.length > 0
+            ? { createdAt: items[items.length - 1].createdAt, id: items[items.length - 1].id }
+            : null
+        return Result.ok({ items, nextCursor })
+      }
+      return Result.ok({ items: rows, nextCursor: null })
+    } catch (cause) {
+      return Result.err(new DatabaseError({ message: 'Failed to list debt entries', cause }))
+    }
+  }
 
   async create(input: CreateDebtEntryInput): Promise<Result<DebtEntry, AppError>> {
     try {

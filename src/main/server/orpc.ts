@@ -21,7 +21,7 @@ export function createServices(db: AppDb) {
   const products = new ProductsService(new ProductsDataAccess(db))
   const payments = new PaymentsService(new PaymentsDataAccess(db), db, clients)
   const orders = new OrdersService(new OrdersDataAccess(db), db, clients, products, payments)
-  const debtNotebook = new DebtNotebookService(new DebtNotebookDataAccess(db))
+  const debtNotebook = new DebtNotebookService(new DebtNotebookDataAccess(db), db)
 
   return { clients, products, orders, payments, debtNotebook }
 }

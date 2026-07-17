@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { useQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useForm } from '@tanstack/react-form'
 import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
@@ -27,22 +27,37 @@ import { useCreateDebtEntry } from '../../features/debt-notebook/hooks/use-creat
 import { useAddDebtTransaction } from '../../features/debt-notebook/hooks/use-add-debt-transaction'
 import { orpc } from '@renderer/integrations/orpc'
 import z from 'zod'
+import { useIntersectionObserver } from '#hooks/use-intersection-observer'
 
 function DebtNotebookPage() {
   const [newEntryOpen, setNewEntryOpen] = React.useState(false)
   const [transactionEntryId, setTransactionEntryId] = React.useState<number | null>(null)
   const { type } = Route.useSearch()
 
-  const { data: entries, isLoading } = useQuery(orpc.debtNotebook.list.queryOptions())
+  const { data, isLoading, isFetching, fetchNextPage, hasNextPage } = useInfiniteQuery(
+    orpc.debtNotebook.list.infiniteOptions({
+      input: (pageParam) =>
+        ({
+          cursor: pageParam,
+          limit: 20
+        }) as any,
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+      initialPageParam: null as { createdAt: Date; id: number } | null
+    })
+  )
+
+  const loadMoreRef = useIntersectionObserver<HTMLDivElement>({
+    onIntersect: fetchNextPage,
+    enabled: hasNextPage && !isFetching
+  })
+
+  const entries = data?.pages.flatMap((page) => page.items) ?? []
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">دفتر الديون</h1>
-          <p className="text-muted-foreground">
-            سجل بسيط ومنفصل للديون غير الرسمية — غير مرتبط بعملاء المتجر.
-          </p>
         </div>
         <Button onClick={() => setNewEntryOpen(true)}>
           <Plus className="h-4 w-4" />
@@ -53,23 +68,32 @@ function DebtNotebookPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
-        ) : entries?.length ? (
-          entries.map((entry) => (
-            <Card key={entry.id}>
-              <CardHeader>
-                <CardTitle>{entry.clientName}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <p className={`text-lg font-semibold ${entry.debt > 0 ? 'text-destructive' : ''}`}>
-                  {formatCurrency(entry.debt)}
-                </p>
+        ) : entries.length ? (
+          <>
+            {entries.map((entry) => (
+              <Card key={entry.id}>
+                <CardHeader>
+                  <CardTitle>{entry.clientName}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <p
+                    className={`text-lg font-semibold ${entry.debt > 0 ? 'text-destructive' : ''}`}
+                  >
+                    {formatCurrency(entry.debt)}
+                  </p>
 
-                <Button variant="outline" size="sm" onClick={() => setTransactionEntryId(entry.id)}>
-                  إضافة إيداع / دين
-                </Button>
-              </CardContent>
-            </Card>
-          ))
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTransactionEntryId(entry.id)}
+                  >
+                    إضافة إيداع / دين
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+            {hasNextPage && <div ref={loadMoreRef} />}
+          </>
         ) : (
           <p className="text-muted-foreground">لا توجد قيود ديون بعد.</p>
         )}

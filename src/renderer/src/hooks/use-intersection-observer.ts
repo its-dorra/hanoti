@@ -1,6 +1,6 @@
 import * as React from 'react'
 
-export function useIntersectionObserver({
+export function useIntersectionObserver<T extends HTMLElement>({
   threshold = 0.1,
   rootMargin = '100px',
   onIntersect,
@@ -11,7 +11,7 @@ export function useIntersectionObserver({
   onIntersect: () => void
   enabled?: boolean
 }) {
-  const triggerRef = React.useRef<any>(null)
+  const triggerRef = React.useRef<T>(null)
 
   React.useEffect(() => {
     if (!enabled) return

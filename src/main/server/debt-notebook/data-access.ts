@@ -26,7 +26,7 @@ const DEBT_ENTRY_COLUMNS = {
 export class DebtNotebookDataAccess {
   constructor(private readonly db: AppDb) {}
 
-  async findAll(cursor?: { createdAt: Date; id: number }, limit?: number) {
+  async findAll(cursor?: { createdAt: Date; id: number } | null, limit?: number) {
     const queryLimit = limit ?? 20
     const entries = await this.db
       .select(DEBT_ENTRY_COLUMNS)
@@ -46,22 +46,28 @@ export class DebtNotebookDataAccess {
 
   async findAllTransactions(
     debtEntryId: number,
-    cursor?: { createdAt: Date; id: number },
+    cursor?: { createdAt: Date; id: number } | null,
     limit?: number
   ) {
     const queryLimit = limit ?? 20
     const entries = await this.db
-      .select(DEBT_ENTRY_COLUMNS)
-      .from(debtEntries)
+      .select()
+      .from(debtTransactions)
       .where(
-        cursor
-          ? or(
-              lt(debtEntries.createdAt, cursor.createdAt),
-              and(eq(debtEntries.createdAt, cursor.createdAt), lt(debtEntries.id, cursor.id))
-            )
-          : undefined
+        and(
+          eq(debtTransactions.debtEntryId, debtEntryId),
+          cursor
+            ? or(
+                lt(debtTransactions.createdAt, cursor.createdAt),
+                and(
+                  eq(debtTransactions.createdAt, cursor.createdAt),
+                  lt(debtTransactions.id, cursor.id)
+                )
+              )
+            : undefined
+        )
       )
-      .orderBy(desc(debtEntries.createdAt), desc(debtEntries.id))
+      .orderBy(desc(debtTransactions.createdAt), desc(debtTransactions.id))
       .limit(queryLimit + 1)
     return entries
   }

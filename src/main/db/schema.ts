@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 // ---------------------------------------------------------------------------
 // MODULE 1 — Grocery Store Management
@@ -20,26 +20,31 @@ export const clients = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`)
   },
-  (table) => ({
-    nameIdIdx: index('clients_name_id_idx').on(table.name, table.id)
-  })
+  (table) => [
+    index('clients_name_id_idx').on(table.name, table.id),
+    index('clients_id_created_at_idx').on(table.id, table.createdAt)
+  ]
 )
 
-export const products = sqliteTable('products', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  name: text('name').notNull(),
-  buyingPrice: real('buying_price').notNull(),
-  // Stock quantity. Floor is 0 — never allowed to go negative.
-  // Orders are still permitted to be created even if requested quantity
-  // exceeds stock; in that case stock is clamped to 0 rather than rejected.
-  quantity: integer('quantity').notNull().default(0),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`)
-})
+export const products = sqliteTable(
+  'products',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    name: text('name').notNull(),
+    buyingPrice: real('buying_price').notNull(),
+    quantity: integer('quantity').notNull().default(0),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`)
+  },
+  (t) => [
+    uniqueIndex('products_name_idx').on(t.name),
+    index('products_id_created_at_idx').on(t.id, t.createdAt)
+  ]
+)
 
 // Predefined selling price tiers for a product (e.g. multiple prices to
 // choose from at order time — no name/label, just amounts).
@@ -74,9 +79,10 @@ export const orders = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`)
   },
-  (table) => ({
-    orderDateIdIdx: index('orders_order_date_id_idx').on(table.orderDate, table.id)
-  })
+  (table) => [
+    index('orders_client_id_order_date_idx').on(table.clientId, table.orderDate),
+    index('orders_id_created_at_idx').on(table.id, table.createdAt)
+  ]
 )
 
 export const orderItems = sqliteTable('order_items', {
@@ -116,25 +122,36 @@ export const payments = sqliteTable('payments', {
 // MODULE 2 — Simple Debt Notebook (fully isolated, no FK to clients above)
 // ---------------------------------------------------------------------------
 
-export const debtEntries = sqliteTable('debt_entries', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  clientName: text('client_name').notNull(),
-  debt: real('debt').notNull().default(0),
-  type: text('type', { enum: ['buyer', 'seller'] }).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`)
-})
+export const debtEntries = sqliteTable(
+  'debt_entries',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    clientName: text('client_name').notNull(),
+    debt: real('debt').notNull().default(0),
+    type: text('type', { enum: ['buyer', 'seller'] }).notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`)
+  },
+  (t) => [index('debt_entries_id_created_at_idx').on(t.id, t.createdAt)]
+)
 
-export const debtTransactions = sqliteTable('debt_transactions', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  debtEntryId: integer('debt_entry_id')
-    .notNull()
-    .references(() => debtEntries.id, { onDelete: 'cascade' }),
-  type: text('type', { enum: ['deposit', 'charge'] }).notNull(),
-  amount: real('amount').notNull(),
-  date: integer('date', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  note: text('note')
-})
+export const debtTransactions = sqliteTable(
+  'debt_transactions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    debtEntryId: integer('debt_entry_id')
+      .notNull()
+      .references(() => debtEntries.id, { onDelete: 'cascade' }),
+    type: text('type', { enum: ['deposit', 'charge'] }).notNull(),
+    amount: real('amount').notNull(),
+    date: integer('date', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    note: text('note'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`)
+  },
+  (t) => [index('debt_transactions_id_created_at').on(t.id, t.createdAt)]
+)

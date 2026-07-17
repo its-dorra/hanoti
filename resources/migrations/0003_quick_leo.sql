@@ -1,0 +1,1 @@
+ALTER TABLE `debt_transactions` ADD `created_at` integer DEFAULT (unixepoch()) NOT NULL;

@@ -44,7 +44,7 @@ export function ClientsContainer() {
     return data?.pages.flatMap((page) => page.items) ?? []
   }, [data])
 
-  const loadMoreRef = useIntersectionObserver({
+  const loadMoreRef = useIntersectionObserver<HTMLTableRowElement>({
     onIntersect: fetchNextPage,
     enabled: hasNextPage && !isFetchingNextPage
   })
