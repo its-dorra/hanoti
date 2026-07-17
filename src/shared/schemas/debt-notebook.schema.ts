@@ -13,16 +13,23 @@ export type DebtTransaction = z.infer<typeof DebtTransactionSchema>
 export const DebtEntrySchema = z.object({
   id: z.number().int(),
   clientName: z.string(),
-  initialDebt: z.number(),
-  createdAt: z.coerce.date(),
-  transactions: z.array(DebtTransactionSchema).default([]),
-  remainingBalance: z.number() // computed: initialDebt + charges - deposits
+  debt: z.number(),
+  createdAt: z.coerce.date()
 })
 export type DebtEntry = z.infer<typeof DebtEntrySchema>
 
+export type DebtEntryWithCursor = {
+  items: DebtEntry[]
+  nextCursor: {
+    createdAt: Date
+    id: number
+  } | null
+}
+
 export const CreateDebtEntrySchema = z.object({
   clientName: z.string().trim().min(1),
-  initialDebt: z.number().default(0)
+  debt: z.number().default(0),
+  type: z.enum(['buyer', 'seller'])
 })
 export type CreateDebtEntryInput = z.infer<typeof CreateDebtEntrySchema>
 

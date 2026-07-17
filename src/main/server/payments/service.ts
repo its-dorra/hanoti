@@ -102,8 +102,6 @@ export class PaymentsService {
     timestamp: Date
   ): Promise<Result<number, AppError>> {
     try {
-      console.log({ clientId, timestamp })
-
       const rows = await this.dataAccess.findByClientAtTimestamp(clientId, timestamp)
       const total = rows.reduce((sum, row) => sum + row.amount, 0)
       return Result.ok(total)

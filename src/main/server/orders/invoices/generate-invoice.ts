@@ -180,7 +180,19 @@ export function generateInvoicePdf(
       doc.addPage()
       disableAutoPageBreak(doc)
       doc.font(ARABIC_FONT)
-      return drawInvoiceInfo(doc.page.margins.top) + 8
+      const top = doc.page.margins.top
+      doc.fontSize(9).fillColor('#666666')
+
+      // doc.text(shapeArabicLine(`فاتورة رقم`), pageLeft, top, {
+      //   width: fullWidth / 3,
+      //   align: 'right'
+      // })
+      // doc.text(shapeArabicLine(`${order.invoiceNumber.toString().slice(0, 10)})`), pageLeft, top, {
+      //   width: (2 * fullWidth) / 3,
+      //   align: 'right'
+      // })
+      doc.fillColor('black').fontSize(10)
+      return top + 18
     }
 
     // ---- Header (page 1 only) ---------------------------------------------

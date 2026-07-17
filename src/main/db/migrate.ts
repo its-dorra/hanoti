@@ -15,6 +15,8 @@ import { createDb } from './client'
  * (Left out of main.ts by default since there are no generated migrations
  * yet in this scaffold — run `db:generate` first.)
  */
-const db = createDb('./dev.db')
-migrate(db, { migrationsFolder: './src/main/db/migrations' })
-console.log('Migrations applied to ./dev.db')
+
+export async function runMigrations(db: ReturnType<typeof createDb>, migrationPath: string) {
+  await migrate(db, { migrationsFolder: migrationPath })
+  console.log(`✅ Migrations applied from ${migrationPath}`)
+}

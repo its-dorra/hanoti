@@ -4,8 +4,10 @@ import { DebtEntryNotFoundError, DatabaseError, type AppError } from '../../lib/
 import type {
   DebtEntry,
   CreateDebtEntryInput,
-  AddDebtTransactionInput
+  AddDebtTransactionInput,
+  DebtEntryWithCursor
 } from '../../../shared/schemas/debt-notebook.schema'
+import { AppDb } from '../../db/client'
 
 /**
  * No `as unknown as DebtEntry` casts: `DebtNotebookDataAccess` selects
@@ -13,26 +15,39 @@ import type {
  * `remainingBalance` itself, so the composed object already matches.
  */
 export class DebtNotebookService {
-  constructor(private readonly dataAccess: DebtNotebookDataAccess) {}
+  constructor(
+    private readonly dataAccess: DebtNotebookDataAccess,
+    private readonly db: AppDb
+  ) {}
 
-  async list(): Promise<Result<DebtEntry[], AppError>> {
+  async list(
+    cursor?: { createdAt: Date; id: number },
+    limit?: number
+  ): Promise<Result<DebtEntryWithCursor, AppError>> {
     try {
-      const rows = await this.dataAccess.findAll()
-      return Result.ok(rows)
+      const rows = await this.dataAccess.findAll(cursor, limit)
+      if (limit !== undefined) {
+        const hasNextPage = rows.length > limit
+
+        const items = hasNextPage ? rows.slice(0, limit) : rows
+
+        const nextCursor =
+          hasNextPage && items.length > 0
+            ? { createdAt: items[items.length - 1].createdAt, id: items[items.length - 1].id }
+            : null
+        return Result.ok({ items, nextCursor })
+      }
+      return Result.ok({ items: rows, nextCursor: null })
     } catch (cause) {
       return Result.err(new DatabaseError({ message: 'Failed to list debt entries', cause }))
     }
   }
 
-  async getById(id: number): Promise<Result<DebtEntry, AppError>> {
-    try {
-      const row = await this.dataAccess.findById(id)
-      if (!row) return Result.err(new DebtEntryNotFoundError({ debtEntryId: id }))
-      return Result.ok(row)
-    } catch (cause) {
-      return Result.err(new DatabaseError({ message: 'Failed to fetch debt entry', cause }))
-    }
-  }
+  async listTransactions(
+    debtEntryId: number,
+    cursor?: { createdAt: string; id: number },
+    limit?: number
+  ) {}
 
   async create(input: CreateDebtEntryInput): Promise<Result<DebtEntry, AppError>> {
     try {
@@ -43,23 +58,20 @@ export class DebtNotebookService {
     }
   }
 
-  async addTransaction(input: AddDebtTransactionInput): Promise<Result<DebtEntry, AppError>> {
+  async addTransaction(input: AddDebtTransactionInput): Promise<Result<true, AppError>> {
     try {
-      const row = await this.dataAccess.addTransaction(input)
-      if (!row) return Result.err(new DebtEntryNotFoundError({ debtEntryId: input.debtEntryId }))
-      return Result.ok(row)
+      return await this.db.transaction(async (tx) => {
+        await this.dataAccess.modifyDebt(tx, input)
+
+        const row = await this.dataAccess.addTransaction(tx, input)
+        if (!row) return Result.err(new DebtEntryNotFoundError({ debtEntryId: input.debtEntryId }))
+        return Result.ok(row)
+      })
     } catch (cause) {
       return Result.err(new DatabaseError({ message: 'Failed to record transaction', cause }))
     }
   }
 
-  /**
-   * Returns just the deleted entry's base fields — not a full `DebtEntry`
-   * with `transactions`/`remainingBalance`, since those transactions are
-   * gone along with the entry and there's nothing left to compute a
-   * balance from. Callers only need this to confirm which entry was
-   * removed.
-   */
   async delete(id: number): Promise<Result<{ id: number; clientName: string }, AppError>> {
     try {
       const row = await this.dataAccess.delete(id)

@@ -26,28 +26,14 @@ import { formatCurrency } from '../../lib/utils'
 import { useCreateDebtEntry } from '../../features/debt-notebook/hooks/use-create-debt-entry'
 import { useAddDebtTransaction } from '../../features/debt-notebook/hooks/use-add-debt-transaction'
 import { orpc } from '@renderer/integrations/orpc'
+import z from 'zod'
 
-/**
- * Module 2 — Simple Debt Notebook. Deliberately isolated: no imports from
- * the clients/orders/payments features, its own backend router and
- * tables, free-text client names instead of a Client foreign key.
- */
 function DebtNotebookPage() {
   const [newEntryOpen, setNewEntryOpen] = React.useState(false)
   const [transactionEntryId, setTransactionEntryId] = React.useState<number | null>(null)
+  const { type } = Route.useSearch()
 
   const { data: entries, isLoading } = useQuery(orpc.debtNotebook.list.queryOptions())
-
-  const createEntry = useCreateDebtEntry()
-
-  const newEntryForm = useForm({
-    defaultValues: { clientName: '', initialDebt: 0 },
-    onSubmit: async ({ value }) => {
-      await createEntry.mutateAsync(value)
-      newEntryForm.reset()
-      setNewEntryOpen(false)
-    }
-  })
 
   return (
     <div className="space-y-4">
@@ -74,14 +60,10 @@ function DebtNotebookPage() {
                 <CardTitle>{entry.clientName}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <p
-                  className={`text-lg font-semibold ${entry.remainingBalance > 0 ? 'text-destructive' : ''}`}
-                >
-                  {formatCurrency(entry.remainingBalance)}
+                <p className={`text-lg font-semibold ${entry.debt > 0 ? 'text-destructive' : ''}`}>
+                  {formatCurrency(entry.debt)}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  عدد المعاملات: {entry.transactions.length}
-                </p>
+
                 <Button variant="outline" size="sm" onClick={() => setTransactionEntryId(entry.id)}>
                   إضافة إيداع / دين
                 </Button>
@@ -93,56 +75,7 @@ function DebtNotebookPage() {
         )}
       </div>
 
-      <Dialog open={newEntryOpen} onOpenChange={setNewEntryOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>قيد دين جديد</DialogTitle>
-          </DialogHeader>
-          <form
-            className="space-y-4"
-            onSubmit={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              newEntryForm.handleSubmit()
-            }}
-          >
-            <newEntryForm.Field name="clientName">
-              {(field) => (
-                <div className="space-y-1.5">
-                  <Label htmlFor="clientName">الاسم</Label>
-                  <Input
-                    id="clientName"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                  />
-                </div>
-              )}
-            </newEntryForm.Field>
-            <newEntryForm.Field name="initialDebt">
-              {(field) => (
-                <div className="space-y-1.5">
-                  <Label htmlFor="initialDebt">الدين الأولي</Label>
-                  <Input
-                    id="initialDebt"
-                    type="number"
-                    step="0.01"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(Number(e.target.value))}
-                  />
-                </div>
-              )}
-            </newEntryForm.Field>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setNewEntryOpen(false)}>
-                إلغاء
-              </Button>
-              <Button type="submit" disabled={createEntry.isPending}>
-                {createEntry.isPending ? 'جارٍ الحفظ...' : 'إنشاء'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <NewEntryFormDialog open={newEntryOpen} setOpen={setNewEntryOpen} type={type} />
 
       <AddTransactionDialog
         debtEntryId={transactionEntryId}
@@ -244,6 +177,83 @@ function AddTransactionDialog({
   )
 }
 
+function NewEntryFormDialog({
+  open,
+  setOpen,
+  type
+}: {
+  open: boolean
+  setOpen: (open: boolean) => void
+  type: 'buyer' | 'seller'
+}) {
+  const createEntry = useCreateDebtEntry()
+
+  const newEntryForm = useForm({
+    defaultValues: { clientName: '', debt: 0 },
+    onSubmit: async ({ value }) => {
+      await createEntry.mutateAsync({ ...value, type })
+      newEntryForm.reset()
+      setOpen(false)
+    }
+  })
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>قيد دين جديد</DialogTitle>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            newEntryForm.handleSubmit()
+          }}
+        >
+          <newEntryForm.Field name="clientName">
+            {(field) => (
+              <div className="space-y-1.5">
+                <Label htmlFor="clientName">الاسم</Label>
+                <Input
+                  id="clientName"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                />
+              </div>
+            )}
+          </newEntryForm.Field>
+          <newEntryForm.Field name="debt">
+            {(field) => (
+              <div className="space-y-1.5">
+                <Label htmlFor="debt">الدين</Label>
+                <Input
+                  id="debt"
+                  type="number"
+                  step="0.01"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(Number(e.target.value))}
+                />
+              </div>
+            )}
+          </newEntryForm.Field>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              إلغاء
+            </Button>
+            <Button type="submit" disabled={createEntry.isPending}>
+              {createEntry.isPending ? 'جارٍ الحفظ...' : 'إنشاء'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export const Route = createFileRoute('/debt-notebook/')({
+  validateSearch: z.object({
+    type: z.enum(['buyer', 'seller']).default('buyer')
+  }),
   component: DebtNotebookPage
 })

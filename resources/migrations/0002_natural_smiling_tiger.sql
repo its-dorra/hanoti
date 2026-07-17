@@ -1,0 +1,1 @@
+ALTER TABLE `debt_entries` RENAME COLUMN "initial_debt" TO "debt";

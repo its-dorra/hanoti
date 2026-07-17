@@ -2,13 +2,13 @@ CREATE TABLE `clients` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
 	`phone` text,
-	`address` text,
 	`notes` text,
 	`debt` real DEFAULT 0 NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
 --> statement-breakpoint
+CREATE INDEX `clients_name_id_idx` ON `clients` (`name`,`id`);--> statement-breakpoint
 CREATE TABLE `debt_entries` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`client_name` text NOT NULL,
@@ -50,12 +50,12 @@ CREATE TABLE `orders` (
 	FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE INDEX `orders_order_date_id_idx` ON `orders` (`order_date`,`id`);--> statement-breakpoint
 CREATE TABLE `payments` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`client_id` integer NOT NULL,
 	`amount` real NOT NULL,
 	`payment_date` integer DEFAULT (unixepoch()) NOT NULL,
-	`method` text DEFAULT 'cash' NOT NULL,
 	`note` text,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`client_id`) REFERENCES `clients`(`id`) ON UPDATE no action ON DELETE no action

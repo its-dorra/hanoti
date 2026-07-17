@@ -6,6 +6,9 @@ import icon from '../../resources/icon.png?asset'
 import { orpcHandler } from './server'
 import { db } from './db'
 import { buildContext } from './server/orpc'
+import { mkdir } from 'node:fs/promises'
+import { runMigrations } from './db/migrate'
+import { DBDirectory } from './db/path'
 
 function createWindow(): void {
   // Create the browser window.
@@ -42,7 +45,7 @@ function createWindow(): void {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -56,11 +59,23 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  const arabicFontPath = app.isPackaged
-    ? path.join(process.resourcesPath, 'assets', 'fonts', 'NotoNaskhArabic-Regular.ttf')
-    : path.join(process.cwd(), 'assets', 'fonts', 'NotoNaskhArabic-Regular.ttf')
+  const res = await mkdir(DBDirectory(), { recursive: true })
 
-  const context = buildContext(db, arabicFontPath)
+  console.log({ res })
+
+  const arabicFontPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'fonts', 'NotoNaskhArabic-Regular.ttf')
+    : path.join(process.cwd(), 'resources', 'fonts', 'NotoNaskhArabic-Regular.ttf')
+
+  const migrationPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'migrations')
+    : path.join(process.cwd(), 'resources', 'migrations')
+
+  const database = db()
+
+  await runMigrations(database, migrationPath)
+
+  const context = buildContext(database, arabicFontPath)
 
   ipcMain.on('start-orpc-server', async (event) => {
     const [serverPort] = event.ports

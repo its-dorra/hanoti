@@ -1,5 +1,5 @@
-import { eq, desc } from 'drizzle-orm'
-import type { AppDb } from '../../db/client'
+import { eq, desc, sql, or, lt, and } from 'drizzle-orm'
+import type { AppDb, AppTransaction } from '../../db/client'
 import { debtEntries, debtTransactions } from '../../db/schema'
 import type {
   CreateDebtEntryInput,
@@ -19,70 +19,80 @@ import type {
 const DEBT_ENTRY_COLUMNS = {
   id: debtEntries.id,
   clientName: debtEntries.clientName,
-  initialDebt: debtEntries.initialDebt,
+  debt: debtEntries.debt,
   createdAt: debtEntries.createdAt
-}
-
-const DEBT_TRANSACTION_COLUMNS = {
-  id: debtTransactions.id,
-  debtEntryId: debtTransactions.debtEntryId,
-  type: debtTransactions.type,
-  amount: debtTransactions.amount,
-  date: debtTransactions.date,
-  note: debtTransactions.note
 }
 
 export class DebtNotebookDataAccess {
   constructor(private readonly db: AppDb) {}
 
-  async findAll() {
+  async findAll(cursor?: { createdAt: Date; id: number }, limit?: number) {
+    const queryLimit = limit ?? 20
     const entries = await this.db
       .select(DEBT_ENTRY_COLUMNS)
       .from(debtEntries)
-      .orderBy(desc(debtEntries.createdAt))
-    return Promise.all(entries.map((e) => this.attachTransactions(e)))
+      .where(
+        cursor
+          ? or(
+              lt(debtEntries.createdAt, cursor.createdAt),
+              and(eq(debtEntries.createdAt, cursor.createdAt), lt(debtEntries.id, cursor.id))
+            )
+          : undefined
+      )
+      .orderBy(desc(debtEntries.createdAt), desc(debtEntries.id))
+      .limit(queryLimit + 1)
+    return entries
   }
 
-  async findById(id: number) {
-    const [entry] = await this.db
+  async findAllTransactions(
+    debtEntryId: number,
+    cursor?: { createdAt: Date; id: number },
+    limit?: number
+  ) {
+    const queryLimit = limit ?? 20
+    const entries = await this.db
       .select(DEBT_ENTRY_COLUMNS)
       .from(debtEntries)
-      .where(eq(debtEntries.id, id))
-    if (!entry) return null
-    return this.attachTransactions(entry)
-  }
-
-  private async attachTransactions<T extends { id: number; initialDebt: number }>(entry: T) {
-    const transactions = await this.db
-      .select(DEBT_TRANSACTION_COLUMNS)
-      .from(debtTransactions)
-      .where(eq(debtTransactions.debtEntryId, entry.id))
-      .orderBy(desc(debtTransactions.date))
-
-    const remainingBalance = transactions.reduce(
-      (balance, t) => balance + (t.type === 'charge' ? t.amount : -t.amount),
-      entry.initialDebt
-    )
-
-    return { ...entry, transactions, remainingBalance }
+      .where(
+        cursor
+          ? or(
+              lt(debtEntries.createdAt, cursor.createdAt),
+              and(eq(debtEntries.createdAt, cursor.createdAt), lt(debtEntries.id, cursor.id))
+            )
+          : undefined
+      )
+      .orderBy(desc(debtEntries.createdAt), desc(debtEntries.id))
+      .limit(queryLimit + 1)
+    return entries
   }
 
   async create(input: CreateDebtEntryInput) {
     const [row] = await this.db
       .insert(debtEntries)
-      .values({ clientName: input.clientName, initialDebt: input.initialDebt })
+      .values({ clientName: input.clientName, debt: input.debt, type: input.type })
       .returning(DEBT_ENTRY_COLUMNS)
-    return this.attachTransactions(row)
+    return row
   }
 
-  async addTransaction(input: AddDebtTransactionInput) {
-    await this.db.insert(debtTransactions).values({
+  async modifyDebt(
+    tx: AppTransaction,
+    input: { debtEntryId: number; amount: number; type: 'charge' | 'deposit' }
+  ) {
+    tx.update(debtEntries)
+      .set({
+        debt: sql`${debtEntries.debt} + ${input.type === 'charge' ? input.amount : -input.amount}`
+      })
+      .where(eq(debtEntries.id, input.debtEntryId))
+  }
+
+  async addTransaction(tx: AppTransaction, input: AddDebtTransactionInput) {
+    await tx.insert(debtTransactions).values({
       debtEntryId: input.debtEntryId,
       type: input.type,
       amount: input.amount,
       note: input.note ?? null
     })
-    return this.findById(input.debtEntryId)
+    return true
   }
 
   async delete(id: number) {

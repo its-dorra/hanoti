@@ -119,7 +119,8 @@ export const payments = sqliteTable('payments', {
 export const debtEntries = sqliteTable('debt_entries', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   clientName: text('client_name').notNull(),
-  initialDebt: real('initial_debt').notNull().default(0),
+  debt: real('debt').notNull().default(0),
+  type: text('type', { enum: ['buyer', 'seller'] }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`)

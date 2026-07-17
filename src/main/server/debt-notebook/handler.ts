@@ -16,16 +16,6 @@ export const debtNotebookRouter = os.router({
     })
   }),
 
-  getById: os.input(z.object({ id: z.number().int() })).handler(async ({ input, context }) => {
-    const result = await context.services.debtNotebook.getById(input.id)
-    return result.match({
-      ok: (v) => v,
-      err: (e) => {
-        throw context.toORPCError(e)
-      }
-    })
-  }),
-
   create: os.input(CreateDebtEntrySchema).handler(async ({ input, context }) => {
     const result = await context.services.debtNotebook.create(input)
     return result.match({

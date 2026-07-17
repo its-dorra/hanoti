@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "35a29a6e-ab91-450c-a15f-2eb5f90ce8ef",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "e85d0999-edb6-4d4c-8135-9023d7ff36fb",
+  "prevId": "822c7af7-5ce2-49a9-8ab2-d0e97599d7c5",
   "tables": {
     "clients": {
       "name": "clients",
@@ -23,13 +23,6 @@
         },
         "phone": {
           "name": "phone",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "address": {
-          "name": "address",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -67,7 +60,16 @@
           "default": "(unixepoch())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "clients_name_id_idx": {
+          "name": "clients_name_id_idx",
+          "columns": [
+            "name",
+            "id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
@@ -97,6 +99,13 @@
           "notNull": true,
           "autoincrement": false,
           "default": 0
+        },
+        "type": {
+          "name": "type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         },
         "created_at": {
           "name": "created_at",
@@ -166,8 +175,12 @@
           "name": "debt_transactions_debt_entry_id_debt_entries_id_fk",
           "tableFrom": "debt_transactions",
           "tableTo": "debt_entries",
-          "columnsFrom": ["debt_entry_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "debt_entry_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -235,8 +248,12 @@
           "name": "order_items_order_id_orders_id_fk",
           "tableFrom": "order_items",
           "tableTo": "orders",
-          "columnsFrom": ["order_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "order_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -244,8 +261,12 @@
           "name": "order_items_product_id_products_id_fk",
           "tableFrom": "order_items",
           "tableTo": "products",
-          "columnsFrom": ["product_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -318,14 +339,27 @@
           "default": "(unixepoch())"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "orders_order_date_id_idx": {
+          "name": "orders_order_date_id_idx",
+          "columns": [
+            "order_date",
+            "id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "orders_client_id_clients_id_fk": {
           "name": "orders_client_id_clients_id_fk",
           "tableFrom": "orders",
           "tableTo": "clients",
-          "columnsFrom": ["client_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "client_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -366,14 +400,6 @@
           "autoincrement": false,
           "default": "(unixepoch())"
         },
-        "method": {
-          "name": "method",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'cash'"
-        },
         "note": {
           "name": "note",
           "type": "text",
@@ -396,8 +422,12 @@
           "name": "payments_client_id_clients_id_fk",
           "tableFrom": "payments",
           "tableTo": "clients",
-          "columnsFrom": ["client_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "client_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -437,8 +467,12 @@
           "name": "product_prices_product_id_products_id_fk",
           "tableFrom": "product_prices",
           "tableTo": "products",
-          "columnsFrom": ["product_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "product_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

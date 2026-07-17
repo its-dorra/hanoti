@@ -1,0 +1,1 @@
+ALTER TABLE `debt_entries` ADD `type` text NOT NULL;
