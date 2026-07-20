@@ -25,7 +25,7 @@ function RouteComponent() {
   )
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full flex flex-col gap-y-4">
       <Link to="..">الرجوع</Link>
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-y-2">

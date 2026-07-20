@@ -1,29 +1,13 @@
 import { Link } from '@tanstack/react-router'
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell
-} from '../../../components/ui/table'
-import { Button } from '../../../components/ui/button'
-import { Input } from '../../../components/ui/input'
-import { Skeleton } from '../../../components/ui/skeleton'
-import { Badge } from '../../../components/ui/badge'
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem
-} from '../../../components/ui/select'
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '#components/ui/table'
+import { Button } from '#components/ui/button'
+import { Input } from '#components/ui/input'
+import { Skeleton } from '#components/ui/skeleton'
+
 import { Plus, Printer, Search } from 'lucide-react'
-import { formatCurrency } from '../../../lib/utils'
+import { formatCurrency } from '@/lib/utils'
 import type { Order } from '../../../../../shared/schemas/order.schema'
 import { printInvoice } from '../utils'
-
-export type OrderStatusFilter = Order['status'] | 'all'
 
 interface OrdersPresenterProps {
   orders: Order[]
@@ -31,23 +15,15 @@ interface OrdersPresenterProps {
   isFetchingNextPage: boolean
   hasNextPage: boolean
   loadMoreRef: React.RefObject<HTMLTableRowElement | null>
-  onPrintClick: (order: Order) => void
 
   /** Hidden when this list is already scoped to one client (e.g. their own orders page). */
   showClientSearch: boolean
   clientNameQuery: string
   onClientNameQueryChange: (query: string) => void
-  statusFilter: OrderStatusFilter
-  onStatusFilterChange: (status: OrderStatusFilter) => void
   dateFrom: string
   onDateFromChange: (date: string) => void
   dateTo: string
   onDateToChange: (date: string) => void
-}
-
-const STATUS_LABEL: Record<Order['status'], string> = {
-  open: 'مفتوح',
-  cancelled: 'ملغى'
 }
 
 export function OrdersPresenter({
@@ -60,8 +36,6 @@ export function OrdersPresenter({
   showClientSearch,
   clientNameQuery,
   onClientNameQueryChange,
-  statusFilter,
-  onStatusFilterChange,
   dateFrom,
   onDateFromChange,
   dateTo,
@@ -96,23 +70,6 @@ export function OrdersPresenter({
         )}
 
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">الحالة</label>
-          <Select
-            value={statusFilter}
-            onValueChange={(v) => onStatusFilterChange(v as OrderStatusFilter)}
-          >
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">الكل</SelectItem>
-              <SelectItem value="open">مفتوح</SelectItem>
-              <SelectItem value="cancelled">ملغى</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">من تاريخ</label>
           <Input
             type="date"
@@ -141,7 +98,6 @@ export function OrdersPresenter({
               <TableHead>العميل</TableHead>
               <TableHead>التاريخ</TableHead>
               <TableHead>الإجمالي</TableHead>
-              <TableHead>الحالة</TableHead>
               <TableHead className="w-16 text-end">طباعة</TableHead>
             </TableRow>
           </TableHeader>
@@ -178,11 +134,7 @@ export function OrdersPresenter({
                     </TableCell>
                     <TableCell>{new Date(order.orderDate).toLocaleDateString('en-UK')}</TableCell>
                     <TableCell>{formatCurrency(order.subtotal)}</TableCell>
-                    <TableCell>
-                      <Badge variant={order.status === 'cancelled' ? 'destructive' : 'secondary'}>
-                        {STATUS_LABEL[order.status]}
-                      </Badge>
-                    </TableCell>
+
                     <TableCell className="text-end">
                       <Button
                         variant="ghost"

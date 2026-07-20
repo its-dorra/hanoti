@@ -1,9 +1,8 @@
 import * as React from 'react'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { OrdersPresenter, type OrderStatusFilter } from './orders-presenter'
-import type { Order } from '../../../../../shared/schemas/order.schema'
+import { OrdersPresenter } from './orders-presenter'
 import { orpc } from '@renderer/integrations/orpc'
-import { useIntersectionObserver } from '../../../hooks/use-intersection-observer'
+import { useIntersectionObserver } from '@/hooks/use-intersection-observer'
 
 interface OrdersContainerProps {
   /** When set (e.g. embedded on a client's own orders page), filters to that client and hides the name search. */
@@ -12,7 +11,6 @@ interface OrdersContainerProps {
 
 export function OrdersContainer({ clientId }: OrdersContainerProps) {
   const [clientNameQuery, setClientNameQuery] = React.useState('')
-  const [statusFilter, setStatusFilter] = React.useState<OrderStatusFilter>('all')
   const [dateFrom, setDateFrom] = React.useState('')
   const [dateTo, setDateTo] = React.useState('')
 
@@ -21,13 +19,13 @@ export function OrdersContainer({ clientId }: OrdersContainerProps) {
       orpc.orders.list.infiniteOptions({
         input: (pageParam) => ({
           clientId,
-          status: statusFilter === 'all' ? undefined : statusFilter,
           dateFrom: dateFrom ? new Date(dateFrom) : undefined,
           dateTo: dateTo ? new Date(dateTo) : undefined,
           cursor: pageParam,
           limit: 20,
           query: clientNameQuery
         }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         initialPageParam: null as any,
         getNextPageParam: (lastPage) => lastPage.nextCursor
       })
@@ -57,8 +55,7 @@ export function OrdersContainer({ clientId }: OrdersContainerProps) {
       showClientSearch={!clientId}
       clientNameQuery={clientNameQuery}
       onClientNameQueryChange={setClientNameQuery}
-      statusFilter={statusFilter}
-      onStatusFilterChange={setStatusFilter}
+
       dateFrom={dateFrom}
       onDateFromChange={setDateFrom}
       dateTo={dateTo}

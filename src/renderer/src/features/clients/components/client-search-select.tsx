@@ -1,9 +1,10 @@
 import * as React from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Input } from '../../../components/ui/input'
-import { Button } from '../../../components/ui/button'
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { Input } from '#components/ui/input'
+import { Button } from '#components/ui/button'
 import type { Client } from '../../../../../shared/schemas/client.schema'
 import { orpc } from '@renderer/integrations/orpc'
+import { useIntersectionObserver } from '#hooks/use-intersection-observer'
 
 interface ClientSearchSelectProps {
   selectedClient: Client | undefined
@@ -14,9 +15,32 @@ interface ClientSearchSelectProps {
 export function ClientSearchSelect({ selectedClient, onSelect, onClear }: ClientSearchSelectProps) {
   const [query, setQuery] = React.useState('')
 
-  const { data: clients, isLoading } = useQuery(
-    orpc.clients.list.queryOptions({ input: { query } })
+  const {
+    data: pages,
+    isLoading,
+    isFetchingNextPage,
+    fetchNextPage,
+    hasNextPage
+  } = useInfiniteQuery(
+    orpc.clients.list.infiniteOptions({
+      getNextPageParam: (data) => data.nextCursor,
+      initialPageParam: null as never,
+      input(pageParam) {
+        return {
+          cursor: pageParam,
+          query,
+          limit: 20
+        }
+      }
+    })
   )
+
+  const loadMoreRef = useIntersectionObserver<HTMLDivElement>({
+    enabled: hasNextPage && !isFetchingNextPage,
+    onIntersect: fetchNextPage
+  })
+
+  const clients = pages?.pages.flatMap((items) => items.items) ?? []
 
   if (selectedClient) {
     return (
@@ -27,7 +51,7 @@ export function ClientSearchSelect({ selectedClient, onSelect, onClear }: Client
             <p className="text-xs text-muted-foreground">{selectedClient.phone}</p>
           )}
         </div>
-        <Button type="button" variant="ghost" size="sm" onClick={onClear}>
+        <Button type="button" variant="ghost" size="sm" onClick={() => onClear()}>
           تغيير
         </Button>
       </div>
@@ -45,23 +69,26 @@ export function ClientSearchSelect({ selectedClient, onSelect, onClear }: Client
         }}
       />
 
-      <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-background shadow-md">
+      <div className="mt-1 max-h-60 w-full overflow-auto rounded-md border bg-background shadow-md">
         {isLoading ? (
           <p className="px-3 py-2 text-sm text-muted-foreground">جارٍ البحث...</p>
-        ) : clients && clients.items.length > 0 ? (
-          clients.items.map((client) => (
-            <button
-              key={client.id}
-              type="button"
-              className="block w-full px-3 py-2 text-right text-sm hover:bg-accent"
-              onClick={() => {
-                onSelect(client)
-                setQuery('')
-              }}
-            >
-              {client.name}
-            </button>
-          ))
+        ) : clients.length > 0 ? (
+          <>
+            {clients.map((client) => (
+              <button
+                key={client.id}
+                type="button"
+                className="block w-full px-3 py-2 text-right text-sm hover:bg-accent"
+                onClick={() => {
+                  onSelect(client)
+                  setQuery('')
+                }}
+              >
+                {client.name}
+              </button>
+            ))}
+            {hasNextPage && <div ref={loadMoreRef} />}
+          </>
         ) : (
           <p className="px-3 py-2 text-sm text-muted-foreground">لا توجد نتائج</p>
         )}
