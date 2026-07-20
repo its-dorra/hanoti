@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { sqliteTable, text, integer, real, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core'
 
 // ---------------------------------------------------------------------------
 // MODULE 1 — Grocery Store Management
@@ -20,17 +20,14 @@ export const clients = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`)
   },
-  (table) => [
-    index('clients_name_id_idx').on(table.name, table.id),
-    index('clients_id_created_at_idx').on(table.id, table.createdAt)
-  ]
+  (table) => [index('clients_created_at_id_idx').on(table.createdAt, table.id)]
 )
 
 export const products = sqliteTable(
   'products',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    name: text('name').notNull(),
+    name: text('name').notNull().unique(),
     buyingPrice: real('buying_price').notNull(),
     quantity: integer('quantity').notNull().default(0),
     createdAt: integer('created_at', { mode: 'timestamp' })
@@ -40,21 +37,22 @@ export const products = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`)
   },
-  (t) => [
-    uniqueIndex('products_name_idx').on(t.name),
-    index('products_id_created_at_idx').on(t.id, t.createdAt)
-  ]
+  (t) => [index('products_created_at_id_idx').on(t.createdAt, t.id)]
 )
 
 // Predefined selling price tiers for a product (e.g. multiple prices to
 // choose from at order time — no name/label, just amounts).
-export const productPrices = sqliteTable('product_prices', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  productId: integer('product_id')
-    .notNull()
-    .references(() => products.id, { onDelete: 'cascade' }),
-  amount: real('amount').notNull()
-})
+export const productPrices = sqliteTable(
+  'product_prices',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    productId: integer('product_id')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    amount: real('amount').notNull()
+  },
+  (t) => [index('product_prices_product_id_idx').on(t.productId)]
+)
 
 export const orders = sqliteTable(
   'orders',
@@ -64,13 +62,10 @@ export const orders = sqliteTable(
     invoiceNumber: integer('invoice_number').notNull(),
     clientId: integer('client_id')
       .notNull()
-      .references(() => clients.id),
+      .references(() => clients.id, { onDelete: 'cascade' }),
     orderDate: integer('order_date', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
-    status: text('status', { enum: ['open', 'cancelled'] })
-      .notNull()
-      .default('open'),
     subtotal: real('subtotal').notNull(),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
@@ -81,42 +76,47 @@ export const orders = sqliteTable(
   },
   (table) => [
     index('orders_client_id_order_date_idx').on(table.clientId, table.orderDate),
-    index('orders_id_created_at_idx').on(table.id, table.createdAt)
+    index('orders_client_id_order_date_id_idx').on(table.clientId, table.orderDate, table.id)
   ]
 )
 
-export const orderItems = sqliteTable('order_items', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  orderId: integer('order_id')
-    .notNull()
-    .references(() => orders.id, { onDelete: 'cascade' }),
-  productId: integer('product_id')
-    .notNull()
-    .references(() => products.id),
-  // Snapshots taken at order time so reprints never change retroactively.
-  productNameSnapshot: text('product_name_snapshot').notNull(),
-  quantity: integer('quantity').notNull(),
-  unitPrice: real('unit_price').notNull(),
-  lineTotal: real('line_total').notNull()
-})
+export const orderItems = sqliteTable(
+  'order_items',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    orderId: integer('order_id')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    productId: integer('product_id')
+      .notNull()
+      .references(() => products.id),
+    // Snapshots taken at order time so reprints never change retroactively.
+    productNameSnapshot: text('product_name_snapshot').notNull(),
+    quantity: integer('quantity').notNull(),
+    unitPrice: real('unit_price').notNull(),
+    lineTotal: real('line_total').notNull()
+  },
+  (t) => [index('order_items_order_id_idx').on(t.orderId)]
+)
 
-// Client-scoped payments. Deliberately has no relation to orders at all —
-// payments and orders are independent concerns; a payment simply reduces
-// the client's running `debt` balance (see clients.debt above).
-export const payments = sqliteTable('payments', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  clientId: integer('client_id')
-    .notNull()
-    .references(() => clients.id),
-  amount: real('amount').notNull(),
-  paymentDate: integer('payment_date', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  note: text('note'),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`)
-})
+export const payments = sqliteTable(
+  'payments',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    clientId: integer('client_id')
+      .notNull()
+      .references(() => clients.id, { onDelete: 'cascade' }),
+    amount: real('amount').notNull(),
+    paymentDate: integer('payment_date', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    note: text('note'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .default(sql`(unixepoch())`)
+  },
+  (table) => [index('payments_client_id_payment_date_idx').on(table.clientId, table.paymentDate)]
+)
 
 // ---------------------------------------------------------------------------
 // MODULE 2 — Simple Debt Notebook (fully isolated, no FK to clients above)

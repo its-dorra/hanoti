@@ -5,7 +5,7 @@ export function useCreateDebtEntry() {
   const queryClient = useQueryClient()
   return useMutation(
     orpc.debtNotebook.create.mutationOptions({
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: orpc.debtNotebook.key() })
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: orpc.debtNotebook.list.key() })
     })
   )
 }

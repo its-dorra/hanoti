@@ -25,7 +25,8 @@ export function OrdersContainer({ clientId }: OrdersContainerProps) {
           dateFrom: dateFrom ? new Date(dateFrom) : undefined,
           dateTo: dateTo ? new Date(dateTo) : undefined,
           cursor: pageParam,
-          limit: 20
+          limit: 20,
+          query: clientNameQuery
         }),
         initialPageParam: null as any,
         getNextPageParam: (lastPage) => lastPage.nextCursor
@@ -36,21 +37,10 @@ export function OrdersContainer({ clientId }: OrdersContainerProps) {
     return data?.pages.flatMap((page) => page.items) ?? []
   }, [data])
 
-  const loadMoreRef = useIntersectionObserver({
+  const loadMoreRef = useIntersectionObserver<HTMLTableRowElement>({
     onIntersect: fetchNextPage,
     enabled: hasNextPage && !isFetchingNextPage
   })
-
-  async function handlePrintClick(order: Order) {
-    // One-off imperative call outside of a hook — `.call()` invokes the
-    // same procedure directly, bypassing the React Query cache, while
-    // staying on the same typed `orpc` surface as every query/mutation.
-    const { base64 } = await orpc.orders.getInvoicePdf.call({ orderId: order.id })
-    await window.api.openPdf({
-      base64,
-      filename: `invoice-${order.invoiceNumber}.pdf`
-    })
-  }
 
   if (isError) {
     return <p className="text-destructive">تعذر تحميل الطلبات. يرجى المحاولة مرة أخرى.</p>
@@ -63,7 +53,6 @@ export function OrdersContainer({ clientId }: OrdersContainerProps) {
       isFetchingNextPage={isFetchingNextPage}
       hasNextPage={hasNextPage}
       loadMoreRef={loadMoreRef}
-      onPrintClick={handlePrintClick}
 
       showClientSearch={!clientId}
       clientNameQuery={clientNameQuery}

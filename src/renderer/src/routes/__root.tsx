@@ -38,7 +38,7 @@ function RootLayout() {
 function AppSidebar() {
   const { theme, toggleTheme } = useTheme()
   return (
-    <Sidebar>
+    <Sidebar dir="rtl" side="right">
       <SidebarHeader />
       <SidebarContent>
         <SidebarGroup className="gap-1">
@@ -47,7 +47,9 @@ function AppSidebar() {
               <SidebarMenuButton asChild>
                 <Link
                   to={item.to}
-                  activeProps={{ className: 'bg-primary text-primary-foreground' }}
+                  activeProps={{
+                    className: 'bg-primary text-primary-foreground bg-primary'
+                  }}
                   className="flex items-center gap-2 rounded-md p-2 py-5 text-sm font-medium"
                 >
                   <item.icon className="h-4 w-4" />

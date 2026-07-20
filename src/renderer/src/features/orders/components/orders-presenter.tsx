@@ -21,6 +21,7 @@ import {
 import { Plus, Printer, Search } from 'lucide-react'
 import { formatCurrency } from '../../../lib/utils'
 import type { Order } from '../../../../../shared/schemas/order.schema'
+import { printInvoice } from '../utils'
 
 export type OrderStatusFilter = Order['status'] | 'all'
 
@@ -29,7 +30,7 @@ interface OrdersPresenterProps {
   isLoading: boolean
   isFetchingNextPage: boolean
   hasNextPage: boolean
-  loadMoreRef: React.RefObject<any>
+  loadMoreRef: React.RefObject<HTMLTableRowElement | null>
   onPrintClick: (order: Order) => void
 
   /** Hidden when this list is already scoped to one client (e.g. their own orders page). */
@@ -55,7 +56,6 @@ export function OrdersPresenter({
   isFetchingNextPage,
   hasNextPage,
   loadMoreRef,
-  onPrintClick,
 
   showClientSearch,
   clientNameQuery,
@@ -184,7 +184,11 @@ export function OrdersPresenter({
                       </Badge>
                     </TableCell>
                     <TableCell className="text-end">
-                      <Button variant="ghost" size="icon" onClick={() => onPrintClick(order)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => printInvoice(order.id, order.invoiceNumber)}
+                      >
                         <Printer className="h-4 w-4" />
                       </Button>
                     </TableCell>

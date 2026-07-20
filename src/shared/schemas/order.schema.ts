@@ -11,17 +11,11 @@ export const OrderItemSchema = z.object({
 })
 export type OrderItem = z.infer<typeof OrderItemSchema>
 
-// "paid" is intentionally not a status here — payment is tracked entirely
-// on the client's `debt` balance via the separate Payments module, not
-// per-order. An order is either open or cancelled.
-export const OrderStatusSchema = z.enum(['open', 'cancelled'])
-
 export const OrderSchema = z.object({
   id: z.number().int(),
   invoiceNumber: z.number().int(),
   clientId: z.number().int(),
   orderDate: z.coerce.date(),
-  status: OrderStatusSchema,
   subtotal: z.number().nonnegative(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
@@ -47,18 +41,6 @@ const CreateOrderItemSchema = z
     path: ['priceId']
   })
 
-// The order itself carries no payment fields (see OrderSchema above) —
-// order/order-item rows, stock, and the client's `debt` are the only
-// things `createOrder` touches for the order side.
-//
-// `depositAmount` is a convenience: recording a deposit *at the moment
-// the order is created* is still a genuinely separate write against the
-// Payments table (no FK to the order — see payments schema), but it's
-// convenient for the cashier to enter both in one form. OrdersService
-// correlates the two purely by giving them the exact same timestamp, so
-// anything that needs to know "what was deposited when this order was
-// made" (e.g. the invoice PDF) looks it up by matching that timestamp,
-// never by a stored relation.
 export const CreateOrderSchema = z.object({
   clientId: z.number().int().positive(),
   items: z.array(CreateOrderItemSchema).min(1, 'Order must have at least one item'),
@@ -75,11 +57,11 @@ export type OrderCursor = z.infer<typeof OrderCursorSchema>
 export const OrderFilterSchema = z
   .object({
     clientId: z.number().int().positive().optional(),
-    status: OrderStatusSchema.optional(),
     dateFrom: z.coerce.date().optional(),
     dateTo: z.coerce.date().optional(),
     cursor: OrderCursorSchema.nullable().optional(),
-    limit: z.number().int().min(1).max(100).default(20)
+    limit: z.number().int().min(1).max(100).default(20),
+    query: z.string().optional()
   })
   .refine((v) => !v.dateFrom || !v.dateTo || v.dateFrom <= v.dateTo, {
     message: 'dateFrom must be before or equal to dateTo',
@@ -95,7 +77,6 @@ export type PaginatedOrders = z.infer<typeof PaginatedOrdersSchema>
 
 export const UpdateOrderSchema = z.object({
   id: z.number().int().positive(),
-  status: OrderStatusSchema.optional(),
   items: z.array(CreateOrderItemSchema).optional()
 })
 export type UpdateOrderInput = z.infer<typeof UpdateOrderSchema>

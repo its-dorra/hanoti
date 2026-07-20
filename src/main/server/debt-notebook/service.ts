@@ -5,7 +5,8 @@ import type {
   DebtEntry,
   CreateDebtEntryInput,
   AddDebtTransactionInput,
-  DebtEntryWithCursor
+  DebtEntryWithCursor,
+  UpdateDebtTransactionInput
 } from '../../../shared/schemas/debt-notebook.schema'
 import { AppDb } from '../../db/client'
 
@@ -20,12 +21,24 @@ export class DebtNotebookService {
     private readonly db: AppDb
   ) {}
 
+  async findByDebtEntryId(debtEntryId: number): Promise<Result<DebtEntry, AppError>> {
+    try {
+      const row = await this.dataAccess.findByDebtEntryId(debtEntryId)
+      if (!row) return Result.err(new DebtEntryNotFoundError({ debtEntryId }))
+      return Result.ok(row)
+    } catch (cause) {
+      return Result.err(new DatabaseError({ message: 'Failed to find debt entry', cause }))
+    }
+  }
+
   async list(
+    type: 'buyer' | 'seller',
+    query: string,
     cursor?: { createdAt: Date; id: number } | null,
     limit?: number
   ): Promise<Result<DebtEntryWithCursor, AppError>> {
     try {
-      const rows = await this.dataAccess.findAll(cursor, limit)
+      const rows = await this.dataAccess.findAll(type, query, cursor, limit)
       if (limit !== undefined) {
         const hasNextPage = rows.length > limit
 
@@ -79,14 +92,36 @@ export class DebtNotebookService {
   async addTransaction(input: AddDebtTransactionInput): Promise<Result<true, AppError>> {
     try {
       return await this.db.transaction(async (tx) => {
-        await this.dataAccess.modifyDebt(tx, input)
-
         const row = await this.dataAccess.addTransaction(tx, input)
         if (!row) return Result.err(new DebtEntryNotFoundError({ debtEntryId: input.debtEntryId }))
         return Result.ok(row)
       })
     } catch (cause) {
       return Result.err(new DatabaseError({ message: 'Failed to record transaction', cause }))
+    }
+  }
+
+  async updateTransaction(transactionId: number, input: UpdateDebtTransactionInput) {
+    try {
+      return await this.db.transaction(async (tx) => {
+        const row = await this.dataAccess.updateTransaction(tx, transactionId, input)
+        if (!row) return Result.err(new DebtEntryNotFoundError({ debtEntryId: 0 }))
+        return Result.ok(row)
+      })
+    } catch (cause) {
+      return Result.err(new DatabaseError({ message: 'Failed to modify transaction', cause }))
+    }
+  }
+
+  async deleteTransaction(id: number) {
+    try {
+      return await this.db.transaction(async (tx) => {
+        const result = await this.dataAccess.deleteTransaction(tx, id)
+        if (!result) return Result.err(new DebtEntryNotFoundError({ debtEntryId: id }))
+        return Result.ok(result)
+      })
+    } catch (cause) {
+      return Result.err(new DatabaseError({ message: 'Failed to delete transaction', cause }))
     }
   }
 

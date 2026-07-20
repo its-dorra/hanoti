@@ -39,4 +39,11 @@ export const AddDebtTransactionSchema = z.object({
   amount: z.number().positive(),
   note: z.string().trim().min(1).nullable().optional()
 })
+
+export const UpdateDebtTransactionSchema = z.object({
+  transactionId: z.number().int(),
+  input: AddDebtTransactionSchema.omit({ debtEntryId: true })
+})
+
 export type AddDebtTransactionInput = z.infer<typeof AddDebtTransactionSchema>
+export type UpdateDebtTransactionInput = Omit<AddDebtTransactionInput, 'debtEntryId'>

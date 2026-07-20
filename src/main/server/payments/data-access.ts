@@ -1,5 +1,5 @@
 import { and, eq, desc } from 'drizzle-orm'
-import type { AppDb } from '../../db/client'
+import type { AppDb, AppTransaction } from '../../db/client'
 import { payments } from '../../db/schema'
 import type { RecordPaymentInput } from '../../../shared/schemas/payment.schema'
 
@@ -49,7 +49,7 @@ export class PaymentsDataAccess {
    * one step of a larger atomic transaction (PaymentsService.recordPayment,
    * or OrdersService.createOrder when a deposit accompanies the order).
    */
-  async create(tx: AppDb, input: RecordPaymentInput, timestamp: Date) {
+  async create(tx: AppTransaction, input: RecordPaymentInput, timestamp: Date) {
     const [row] = await tx
       .insert(payments)
       .values({

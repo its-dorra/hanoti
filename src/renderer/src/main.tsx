@@ -10,6 +10,7 @@ import { routeTree } from './routeTree.gen'
 import { queryClient } from './integrations/tanstack-query'
 import { ThemeProvider } from './lib/theme-provider'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { DirectionProvider } from '#components/ui/direction'
 
 const memoryHistory = createMemoryHistory({
   initialEntries: ['/']
@@ -33,8 +34,10 @@ if (!rootElement.innerHTML) {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <ReactQueryDevtools />
-          <RouterProvider router={router} />
+          <DirectionProvider dir="rtl">
+            <ReactQueryDevtools />
+            <RouterProvider router={router} />
+          </DirectionProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </StrictMode>

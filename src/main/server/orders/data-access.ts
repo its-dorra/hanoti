@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte, sql, or, lt } from 'drizzle-orm'
+import { and, desc, eq, gte, lte, sql, or, lt, like } from 'drizzle-orm'
 import type { AppDb } from '../../db/client'
 import { orders, orderItems, clients } from '../../db/schema'
 import type { OrderFilterInput } from '../../../shared/schemas/order.schema'
@@ -20,7 +20,6 @@ const ORDER_COLUMNS = {
   invoiceNumber: orders.invoiceNumber,
   clientId: orders.clientId,
   orderDate: orders.orderDate,
-  status: orders.status,
   subtotal: orders.subtotal,
   createdAt: orders.createdAt,
   updatedAt: orders.updatedAt
@@ -49,9 +48,9 @@ export class OrdersDataAccess {
       .where(
         and(
           filter.clientId ? eq(orders.clientId, filter.clientId) : undefined,
-          filter.status ? eq(orders.status, filter.status) : undefined,
           filter.dateFrom ? gte(orders.orderDate, filter.dateFrom) : undefined,
           filter.dateTo ? lte(orders.orderDate, filter.dateTo) : undefined,
+          filter.query ? like(clients.name, `%${filter.query}%`) : undefined,
           cursor
             ? or(
                 lt(orders.orderDate, cursor.orderDate),
@@ -124,15 +123,6 @@ export class OrdersDataAccess {
       .insert(orderItems)
       .values(items.map((item) => ({ orderId, ...item })))
       .returning(ORDER_ITEM_COLUMNS)
-  }
-
-  async updateStatus(tx: AppDb, id: number, status: 'open' | 'cancelled') {
-    const [row] = await tx
-      .update(orders)
-      .set({ status, updatedAt: new Date() })
-      .where(eq(orders.id, id))
-      .returning(ORDER_COLUMNS)
-    return row ?? null
   }
 
   async replaceItems(tx: AppDb, orderId: number, items: NewOrderItemRow[], newSubtotal: number) {

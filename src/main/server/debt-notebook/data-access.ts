@@ -3,7 +3,8 @@ import type { AppDb, AppTransaction } from '../../db/client'
 import { debtEntries, debtTransactions } from '../../db/schema'
 import type {
   CreateDebtEntryInput,
-  AddDebtTransactionInput
+  AddDebtTransactionInput,
+  UpdateDebtTransactionInput
 } from '../../../shared/schemas/debt-notebook.schema'
 
 /**
@@ -26,22 +27,42 @@ const DEBT_ENTRY_COLUMNS = {
 export class DebtNotebookDataAccess {
   constructor(private readonly db: AppDb) {}
 
-  async findAll(cursor?: { createdAt: Date; id: number } | null, limit?: number) {
+  async findAll(
+    type: 'buyer' | 'seller',
+    query: string,
+    cursor?: { createdAt: Date; id: number } | null,
+    limit?: number
+  ) {
     const queryLimit = limit ?? 20
     const entries = await this.db
       .select(DEBT_ENTRY_COLUMNS)
       .from(debtEntries)
       .where(
-        cursor
-          ? or(
-              lt(debtEntries.createdAt, cursor.createdAt),
-              and(eq(debtEntries.createdAt, cursor.createdAt), lt(debtEntries.id, cursor.id))
-            )
-          : undefined
+        and(
+          eq(debtEntries.type, type),
+          query
+            ? sql`LOWER(${debtEntries.clientName}) LIKE ${`%${query.toLowerCase()}%`}`
+            : undefined,
+          cursor
+            ? or(
+                lt(debtEntries.createdAt, cursor.createdAt),
+                and(eq(debtEntries.createdAt, cursor.createdAt), lt(debtEntries.id, cursor.id))
+              )
+            : undefined
+        )
       )
       .orderBy(desc(debtEntries.createdAt), desc(debtEntries.id))
       .limit(queryLimit + 1)
     return entries
+  }
+
+  async findByDebtEntryId(debtEntryId: number) {
+    return this.db
+      .select(DEBT_ENTRY_COLUMNS)
+      .from(debtEntries)
+      .where(eq(debtEntries.id, debtEntryId))
+      .limit(1)
+      .then((rows) => rows[0])
   }
 
   async findAllTransactions(
@@ -80,25 +101,77 @@ export class DebtNotebookDataAccess {
     return row
   }
 
-  async modifyDebt(
-    tx: AppTransaction,
-    input: { debtEntryId: number; amount: number; type: 'charge' | 'deposit' }
-  ) {
-    tx.update(debtEntries)
+  async addTransaction(tx: AppTransaction, input: AddDebtTransactionInput) {
+    await tx
+      .update(debtEntries)
       .set({
         debt: sql`${debtEntries.debt} + ${input.type === 'charge' ? input.amount : -input.amount}`
       })
       .where(eq(debtEntries.id, input.debtEntryId))
-  }
 
-  async addTransaction(tx: AppTransaction, input: AddDebtTransactionInput) {
     await tx.insert(debtTransactions).values({
       debtEntryId: input.debtEntryId,
       type: input.type,
       amount: input.amount,
-      note: input.note ?? null
+      note: input.note || null
     })
+
     return true
+  }
+
+  async updateTransaction(
+    tx: AppTransaction,
+    transactionId: number,
+    input: UpdateDebtTransactionInput
+  ) {
+    const transaction = await tx
+      .select()
+      .from(debtTransactions)
+      .where(eq(debtTransactions.id, transactionId))
+      .limit(1)
+      .then((rows) => rows[0])
+    if (!transaction) return false
+
+    const debtDelta = transaction.type === 'charge' ? -transaction.amount : transaction.amount
+    const newDebtDelta = input.type === 'charge' ? input.amount : -input.amount
+
+    await tx
+      .update(debtEntries)
+      .set({
+        debt: sql`${debtEntries.debt} + ${debtDelta + newDebtDelta}`
+      })
+      .where(eq(debtEntries.id, transaction.debtEntryId))
+
+    return (
+      await tx
+        .update(debtTransactions)
+        .set({
+          type: input.type,
+          amount: input.amount,
+          note: input.note || null
+        })
+        .where(eq(debtTransactions.id, transactionId))
+        .returning()
+    )[0]
+  }
+
+  async deleteTransaction(tx: AppTransaction, id: number) {
+    const transaction = await tx
+      .select()
+      .from(debtTransactions)
+      .where(eq(debtTransactions.id, id))
+      .limit(1)
+      .then((rows) => rows[0])
+    if (!transaction) return false
+
+    await tx
+      .update(debtEntries)
+      .set({
+        debt: sql`${debtEntries.debt} + ${transaction.type === 'charge' ? -transaction.amount : transaction.amount}`
+      })
+      .where(eq(debtEntries.id, transaction.debtEntryId))
+    await tx.delete(debtTransactions).where(eq(debtTransactions.id, id))
+    return transaction
   }
 
   async delete(id: number) {

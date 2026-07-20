@@ -71,7 +71,7 @@ export class ClientsDataAccess {
       .values({
         name: input.name,
         phone: input.phone ?? null,
-       
+
         notes: input.notes ?? null
       })
       .returning(CLIENT_COLUMNS)
@@ -88,27 +88,11 @@ export class ClientsDataAccess {
     return row ?? null
   }
 
-  /**
-   * Hard delete — no soft-delete flag anywhere in this schema. If the
-   * client has existing orders or payments, the `references(() =>
-   * clients.id)` foreign keys on those tables (no `onDelete` cascade
-   * configured) will reject this at the SQLite level rather than
-   * silently orphaning or cascading away their order/payment history.
-   */
   async delete(id: number) {
     const [row] = await this.db.delete(clients).where(eq(clients.id, id)).returning(CLIENT_COLUMNS)
     return row ?? null
   }
 
-  /**
-   * Adjusts the client's running debt balance by `delta` in a single
-   * UPDATE (no read-then-write round trip needed since SQL can do
-   * `debt = debt + delta` directly, and no aggregation over other tables).
-   *
-   * `tx` is a required first argument — this method only ever runs as one
-   * step of a larger atomic operation (an order being created/edited, or
-   * a payment being recorded), never as a standalone write.
-   */
   async adjustDebt(tx: AppDb, clientId: number, delta: number) {
     const [row] = await tx
       .update(clients)

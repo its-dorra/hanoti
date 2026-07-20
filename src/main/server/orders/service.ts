@@ -193,18 +193,6 @@ export class OrdersService {
     if (existingResult.isErr()) return Result.err(existingResult.error)
     const existing = existingResult.value
 
-    if (input.status && !input.items) {
-      try {
-        const row = await this.db.transaction(async (tx) => {
-          return this.dataAccess.updateStatus(tx as unknown as AppDb, input.id, input.status!)
-        })
-        if (!row) return Result.err(new OrderNotFoundError({ orderId: input.id }))
-        return this.getById(input.id)
-      } catch (cause) {
-        return Result.err(new DatabaseError({ message: 'Failed to update order status', cause }))
-      }
-    }
-
     if (!input.items) return Result.ok(existing)
 
     const resolvedResult = await this.resolveItems(input.items)
@@ -251,10 +239,6 @@ export class OrdersService {
             subtotalDelta
           )
           if (debtResult.isErr()) throw debtResult.error
-        }
-
-        if (input.status) {
-          await this.dataAccess.updateStatus(appTx, input.id, input.status)
         }
 
         return updated
