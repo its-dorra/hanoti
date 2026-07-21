@@ -11,6 +11,7 @@ import z from 'zod'
 import { useIntersectionObserver } from '#hooks/use-intersection-observer'
 import { useDebouncedValue } from '#hooks/use-debounced-value'
 import NewEntryFormDialog from '@renderer/features/debt-notebook/components/new-entry-form-dialog'
+import { Button } from '#components/ui/button'
 
 function DebtNotebookPage() {
   const [newEntryOpen, setNewEntryOpen] = React.useState(false)
@@ -53,6 +54,26 @@ function DebtNotebookPage() {
         </div>
 
         <NewEntryFormDialog open={newEntryOpen} setOpen={setNewEntryOpen} type={type} />
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Link
+          to="."
+          className="rounded-md border p-1 text-sm font-medium transition-colors hover:bg-primary/10 hover:text-primary"
+          search={(s) => ({ ...s, query: '', type: 'buyer' })}
+          activeProps={{ className: 'bg-primary text-primary-foreground' }}
+        >
+          <Button variant="ghost">دين</Button>
+        </Link>
+        <Link
+          to="."
+          className="rounded-md border p-1 text-sm font-medium transition-colors hover:bg-primary/10 hover:text-primary"
+
+          search={(s) => ({ ...s, query: '', type: 'seller' })}
+          activeProps={{ className: 'bg-primary text-primary-foreground ' }}
+        >
+          <Button variant="ghost">بيع</Button>
+        </Link>
       </div>
 
       <Input placeholder="بحث عن عملاء..." value={query} onChange={onQueryChange} />
