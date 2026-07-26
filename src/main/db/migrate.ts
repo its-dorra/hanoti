@@ -1,4 +1,4 @@
-import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
+import { migrate } from 'drizzle-orm/libsql/migrator'
 import { createDb } from './client'
 
 export async function runMigrations(db: ReturnType<typeof createDb>, migrationPath: string) {
