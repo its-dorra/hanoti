@@ -9,7 +9,7 @@ import type {
   ClientCursor,
   PaginatedClients
 } from '../../../shared/schemas/client.schema'
-import type { AppDb } from '../../db/client'
+import type { AppTransaction } from '../../db/client'
 
 /**
  * All business logic for the Clients domain lives here. Handlers never
@@ -105,7 +105,11 @@ export class ClientsService {
    * `tx` is a required first argument, matching the data-access method it
    * wraps — there's no standalone (non-transactional) use of this method.
    */
-  async adjustDebt(tx: AppDb, clientId: number, delta: number): Promise<Result<Client, AppError>> {
+  async adjustDebt(
+    tx: AppTransaction,
+    clientId: number,
+    delta: number
+  ): Promise<Result<Client, AppError>> {
     try {
       const row = await this.dataAccess.adjustDebt(tx, clientId, delta)
       if (!row) return Result.err(new ClientNotFoundError({ clientId }))

@@ -11,7 +11,7 @@ import { Input } from '../../../components/ui/input'
 import { Skeleton } from '../../../components/ui/skeleton'
 import { Badge } from '../../../components/ui/badge'
 import { Pencil, Trash2, Plus, Search } from 'lucide-react'
-import { formatCurrency } from '../../../lib/utils'
+import { formatDZD } from '../../../lib/utils'
 import type { Product } from '../../../../../shared/schemas/product.schema'
 
 interface ProductsPresenterProps {
@@ -86,12 +86,12 @@ export function ProductsPresenter({
               products.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="font-medium">{product.name}</TableCell>
-                  <TableCell>{formatCurrency(product.buyingPrice)}</TableCell>
+                  <TableCell>{formatDZD(product.buyingPrice)}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {product.prices.map((p) => (
                         <Badge key={p.id} variant="secondary">
-                          {formatCurrency(p.amount)}
+                          {formatDZD(p.amount)}
                         </Badge>
                       ))}
                     </div>

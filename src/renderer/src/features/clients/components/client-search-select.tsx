@@ -7,7 +7,7 @@ import { orpc } from '@renderer/integrations/orpc'
 import { useIntersectionObserver } from '#hooks/use-intersection-observer'
 
 interface ClientSearchSelectProps {
-  selectedClient: Client | undefined
+  selectedClient: Client | undefined | null
   onSelect: (client: Client) => void
   onClear: () => void
 }

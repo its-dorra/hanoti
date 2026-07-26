@@ -16,7 +16,7 @@ import type { OrderLineItem } from '../types'
 import { createOrderLineItemKey, resolveUnitPrice } from '../utils'
 import { Product } from 'src/shared/schemas/product.schema'
 import { ProductSearchSelect } from '@renderer/features/products/components/product-search-select'
-import { formatCurrency } from '#lib/utils'
+import { formatDZD } from '#lib/utils'
 
 interface AddOrderItemFormProps {
   onAdd: (item: OrderLineItem) => void
@@ -120,7 +120,7 @@ export function AddOrderItemForm({ onAdd }: AddOrderItemFormProps) {
                 <SelectContent>
                   {product.prices.map((price) => (
                     <SelectItem key={price.id} value={String(price.id)}>
-                      {formatCurrency(price.amount)}
+                      {formatDZD(price.amount)}
                     </SelectItem>
                   ))}
                 </SelectContent>

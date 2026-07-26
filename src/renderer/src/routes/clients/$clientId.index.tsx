@@ -5,7 +5,7 @@ import { Route as RootRoute } from '../__root'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/card'
 import { Skeleton } from '../../components/ui/skeleton'
 import { Button } from '../../components/ui/button'
-import { formatCurrency } from '../../lib/utils'
+import { formatDZD } from '../../lib/utils'
 import { orpc } from '@renderer/integrations/orpc'
 
 function ClientDetailPage() {
@@ -28,9 +28,7 @@ function ClientDetailPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">{client.name}</h1>
-          <p className="text-muted-foreground">
-            {client.phone ?? 'لا يوجد هاتف'} · {client.address ?? 'لا يوجد عنوان'}
-          </p>
+          <p className="text-muted-foreground">{client.phone ?? 'لا يوجد هاتف'}</p>
         </div>
         <Button asChild>
           <Link to="/orders/new" search={{ clientId: id }}>
@@ -47,7 +45,7 @@ function ClientDetailPage() {
         <CardContent className="text-xl font-semibold">
           {balance ? (
             <span className={balance.debt > 0 ? 'text-destructive' : ''}>
-              {formatCurrency(balance.debt)}
+              {formatDZD(balance.debt)}
             </span>
           ) : (
             <Skeleton className="h-6 w-24" />

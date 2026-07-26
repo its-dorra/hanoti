@@ -11,10 +11,6 @@ export interface NewOrderItemRow {
   lineTotal: number
 }
 
-// Explicit column lists so every returned row's shape matches
-// `Order`/`OrderItem` exactly — no hidden columns to strip, but naming
-// them keeps this locked in even if the table grows internal-only columns
-// later, and means the service layer needs no cast.
 const ORDER_COLUMNS = {
   id: orders.id,
   invoiceNumber: orders.invoiceNumber,

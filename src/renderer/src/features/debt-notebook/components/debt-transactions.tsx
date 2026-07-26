@@ -14,6 +14,7 @@ import UpdateTransactionDialog from './update-transaction-dialog-form'
 import DeleteTransactionDialog from './delete-transaction-dialog'
 import { useState } from 'react'
 import { Transaction } from '../types'
+import { formatDZD } from '#lib/utils'
 
 export default function DebtTransactions({ debtEntryId }: { debtEntryId: number }) {
   const { data, fetchNextPage, isFetchingNextPage, hasNextPage } = useInfiniteQuery(
@@ -47,6 +48,8 @@ export default function DebtTransactions({ debtEntryId }: { debtEntryId: number 
             <TableHead>المبلغ</TableHead>
             <TableHead>النوع</TableHead>
             <TableHead>التاريخ</TableHead>
+            <TableHead>ملاحظات</TableHead>
+
             <TableHead className="w-24 text-end">الإجراءات</TableHead>
           </TableRow>
         </TableHeader>
@@ -60,12 +63,13 @@ export default function DebtTransactions({ debtEntryId }: { debtEntryId: number 
 
             return (
               <TableRow key={`transaction-row-${transaction.id}`}>
-                <TableCell>{transaction.amount}</TableCell>
+                <TableCell>{formatDZD(transaction.amount)}</TableCell>
                 <TableCell>{transaction.type === 'deposit' ? 'إيداع' : 'دين'}</TableCell>
                 <TableCell>
                   {transaction.date.toLocaleDateString('fr')} -{' '}
                   {transaction.date.toLocaleTimeString('fr', { hourCycle: 'h24' })}
                 </TableCell>
+                <TableCell>{transaction.note ?? '—'}</TableCell>
                 {today < dayAfter && (
                   <TableCell className="text-end">
                     <DropdownMenu>

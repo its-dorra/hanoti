@@ -28,7 +28,7 @@ export function createServices(db: AppDb) {
 export type Services = ReturnType<typeof createServices>
 
 /** Maps a domain TaggedError to the appropriate ORPC error shape. */
-function toORPCError(e: AppError): ORPCError<any, any> {
+function toORPCError(e: AppError): ORPCError<never, unknown> {
   switch (e.tag) {
     case 'ClientNotFoundError':
     case 'ProductNotFoundError':

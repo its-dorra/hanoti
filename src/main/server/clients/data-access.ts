@@ -1,28 +1,11 @@
 import { eq, like, sql, and, or, lt, desc } from 'drizzle-orm'
-import type { AppDb } from '../../db/client'
+import type { AppDb, AppTransaction } from '../../db/client'
 import { clients } from '../../db/schema'
 import type {
   CreateClientInput,
   UpdateClientInput,
   ClientCursor
 } from '../../../shared/schemas/client.schema'
-
-/**
- * Data-access layer for clients. Database operations only — no business
- * rules, no validation beyond what SQL/Drizzle enforces structurally.
- *
- * No soft-delete flag on this table — `delete` below is a real SQL
- * DELETE. Every select/returning here still names its columns explicitly
- * rather than using `.select()`/`.returning()` with no arguments, so the
- * returned row's shape matches the `Client` type precisely and services
- * can return it directly without an `as unknown as Client` cast.
- *
- * Deliberately has NO sum()/count() aggregation queries. The client's
- * `debt` is a plain column on the row, kept correct incrementally by
- * whoever changes it (OrdersService on order creation, PaymentsService on
- * payment) via `adjustDebt`, rather than recomputed from orders/payments
- * on every read.
- */
 
 const CLIENT_COLUMNS = {
   id: clients.id,
@@ -93,7 +76,7 @@ export class ClientsDataAccess {
     return row ?? null
   }
 
-  async adjustDebt(tx: AppDb, clientId: number, delta: number) {
+  async adjustDebt(tx: AppTransaction, clientId: number, delta: number) {
     const [row] = await tx
       .update(clients)
       .set({ debt: sql`${clients.debt} + ${delta}`, updatedAt: new Date() })

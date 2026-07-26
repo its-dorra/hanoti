@@ -1,3 +1,4 @@
+import { formatDZD } from '#lib/utils'
 import AddTransactionDialog from '@renderer/features/debt-notebook/components/add-transaction-dialog'
 import DebtTransactions from '@renderer/features/debt-notebook/components/debt-transactions'
 import { orpc } from '@renderer/integrations/orpc'
@@ -30,7 +31,9 @@ function RouteComponent() {
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-y-2">
           <h1 className="text-2xl font-semibold">إسم الزبون : {debtEntryQuery.data.clientName}</h1>
-          <p className="text-lg font-semibold">الدين المتبقي : {debtEntryQuery.data.debt}</p>
+          <p className="text-lg font-semibold">
+            الدين المتبقي : {formatDZD(debtEntryQuery.data.debt)}
+          </p>
         </div>
         <AddTransactionDialog debtEntryId={+debtEntryId} />
       </div>

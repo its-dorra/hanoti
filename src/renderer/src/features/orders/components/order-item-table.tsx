@@ -4,7 +4,7 @@ import type { OrderLineItem } from '../types'
 
 import { Button } from '#components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#components/ui/table'
-import { formatCurrency } from '#lib/utils'
+import { formatDZD } from '#lib/utils'
 
 interface OrderItemsTableProps {
   items: OrderLineItem[]
@@ -39,9 +39,9 @@ export function OrderItemsTable({ items, subtotal, onRemove }: OrderItemsTablePr
 
               <TableCell>{item.quantity}</TableCell>
 
-              <TableCell>{formatCurrency(item.unitPrice)}</TableCell>
+              <TableCell>{formatDZD(item.unitPrice)}</TableCell>
 
-              <TableCell>{formatCurrency(item.unitPrice * item.quantity)}</TableCell>
+              <TableCell>{formatDZD(item.unitPrice * item.quantity)}</TableCell>
 
               <TableCell>
                 <Button
@@ -59,9 +59,7 @@ export function OrderItemsTable({ items, subtotal, onRemove }: OrderItemsTablePr
         </TableBody>
       </Table>
 
-      <div className="mt-3 text-end text-lg font-semibold">
-        الإجمالي: {formatCurrency(subtotal)}
-      </div>
+      <div className="mt-3 text-end text-lg font-semibold">الإجمالي: {formatDZD(subtotal)}</div>
     </>
   )
 }

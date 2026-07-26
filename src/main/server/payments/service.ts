@@ -3,7 +3,7 @@ import { PaymentsDataAccess } from './data-access'
 import { ClientsService } from '../clients/service'
 import { DatabaseError, type AppError } from '../../lib/errors'
 import type { Payment, RecordPaymentInput } from '../../../shared/schemas/payment.schema'
-import type { AppDb } from '../../db/client'
+import type { AppDb, AppTransaction } from '../../db/client'
 
 /**
  * Payments are entirely independent of orders — recording one is a
@@ -43,7 +43,7 @@ export class PaymentsService {
    * stock/debt effects, and this payment all commit or roll back together.
    */
   async recordPaymentAt(
-    tx: AppDb,
+    tx: AppTransaction,
     input: RecordPaymentInput,
     timestamp: Date
   ): Promise<Result<Payment, AppError>> {
@@ -74,8 +74,7 @@ export class PaymentsService {
 
     try {
       const payment = await this.db.transaction(async (tx) => {
-        const appTx = tx as unknown as AppDb
-        const result = await this.recordPaymentAt(appTx, input, new Date())
+        const result = await this.recordPaymentAt(tx, input, new Date())
         if (result.isErr()) throw result.error
         return result.value
       })

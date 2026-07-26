@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/ca
 import { Input } from '../../components/ui/input'
 import { Skeleton } from '../../components/ui/skeleton'
 
-import { formatCurrency } from '../../lib/utils'
+import { formatDZD } from '../../lib/utils'
 import { orpc } from '@renderer/integrations/orpc'
 import z from 'zod'
 import { useIntersectionObserver } from '#hooks/use-intersection-observer'
@@ -98,7 +98,7 @@ function DebtNotebookPage() {
                   <p
                     className={`text-lg font-semibold ${entry.debt > 0 ? 'text-destructive' : ''}`}
                   >
-                    {formatCurrency(entry.debt)}
+                    {formatDZD(entry.debt)}
                   </p>
                 </CardContent>
               </Card>

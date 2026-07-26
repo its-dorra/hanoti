@@ -11,16 +11,9 @@ import {
 import { Skeleton } from '../../../components/ui/skeleton'
 import { Button } from '../../../components/ui/button'
 import { Plus } from 'lucide-react'
-import { formatCurrency } from '../../../lib/utils'
+import { formatDZD } from '../../../lib/utils'
 import { RecordPaymentDialog } from './record-payment-dialog'
 import { orpc } from '@renderer/integrations/orpc'
-
-const METHOD_LABEL: Record<'cash' | 'card' | 'transfer' | 'other', string> = {
-  cash: 'نقدًا',
-  card: 'بطاقة',
-  transfer: 'تحويل',
-  other: 'أخرى'
-}
 
 interface ClientPaymentsPageProps {
   clientId: number
@@ -49,7 +42,6 @@ export function ClientPaymentsPage({ clientId }: ClientPaymentsPageProps) {
             <TableRow>
               <TableHead>التاريخ</TableHead>
               <TableHead>المبلغ</TableHead>
-              <TableHead>الطريقة</TableHead>
               <TableHead>ملاحظة</TableHead>
             </TableRow>
           </TableHeader>
@@ -64,8 +56,7 @@ export function ClientPaymentsPage({ clientId }: ClientPaymentsPageProps) {
               payments.map((payment) => (
                 <TableRow key={payment.id}>
                   <TableCell>{new Date(payment.paymentDate).toLocaleDateString('ar')}</TableCell>
-                  <TableCell>{formatCurrency(payment.amount)}</TableCell>
-                  <TableCell>{METHOD_LABEL[payment.method]}</TableCell>
+                  <TableCell>{formatDZD(payment.amount)}</TableCell>
                   <TableCell>{payment.note ?? '—'}</TableCell>
                 </TableRow>
               ))

@@ -5,7 +5,7 @@ import { Input } from '#components/ui/input'
 import { Skeleton } from '#components/ui/skeleton'
 
 import { Plus, Printer, Search } from 'lucide-react'
-import { formatCurrency } from '@/lib/utils'
+import { formatDZD } from '@/lib/utils'
 import type { Order } from '../../../../../shared/schemas/order.schema'
 import { printInvoice } from '../utils'
 
@@ -133,7 +133,7 @@ export function OrdersPresenter({
                       </Link>
                     </TableCell>
                     <TableCell>{new Date(order.orderDate).toLocaleDateString('en-UK')}</TableCell>
-                    <TableCell>{formatCurrency(order.subtotal)}</TableCell>
+                    <TableCell>{formatDZD(order.subtotal)}</TableCell>
 
                     <TableCell className="text-end">
                       <Button
