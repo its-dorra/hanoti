@@ -29,14 +29,12 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
     defaultValues: {
       name: client?.name ?? '',
       phone: client?.phone ?? '',
-      address: client?.address ?? '',
       notes: client?.notes ?? ''
     },
     onSubmit: async ({ value }) => {
       const payload = {
         name: value.name,
         phone: value.phone || null,
-        address: value.address || null,
         notes: value.notes || null
       }
 
@@ -94,19 +92,6 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
                 <Label htmlFor="phone">الهاتف</Label>
                 <Input
                   id="phone"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-              </div>
-            )}
-          </form.Field>
-
-          <form.Field name="address">
-            {(field) => (
-              <div className="space-y-1.5">
-                <Label htmlFor="address">العنوان</Label>
-                <Input
-                  id="address"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
