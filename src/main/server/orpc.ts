@@ -11,38 +11,52 @@ import { PaymentsDataAccess } from './payments/data-access'
 import { PaymentsService } from './payments/service'
 import { DebtNotebookDataAccess } from './debt-notebook/data-access'
 import { DebtNotebookService } from './debt-notebook/service'
+import { LedgersDataAccess } from './ledgers/data-access'
+import { ClientLedgersService } from './ledgers/service'
 
 /**
  * Wires the full service graph for a given db instance. Called once in
  * electron/main.ts and passed down as ORPC context.
  */
 export function createServices(db: AppDb) {
+  const clientLedgers = new ClientLedgersService(db, new LedgersDataAccess(db))
   const clients = new ClientsService(new ClientsDataAccess(db))
   const products = new ProductsService(new ProductsDataAccess(db))
-  const payments = new PaymentsService(new PaymentsDataAccess(db), db, clients)
-  const orders = new OrdersService(new OrdersDataAccess(db), db, clients, products, payments)
+  const payments = new PaymentsService(new PaymentsDataAccess(db), db, clients, clientLedgers)
+  const orders = new OrdersService(
+    new OrdersDataAccess(db),
+    db,
+    clients,
+    products,
+    payments,
+    clientLedgers
+  )
+
+  clientLedgers.setDependencies(orders, payments, clients)
   const debtNotebook = new DebtNotebookService(new DebtNotebookDataAccess(db), db)
 
-  return { clients, products, orders, payments, debtNotebook }
+  return { clients, products, orders, payments, debtNotebook, clientLedgers }
 }
 export type Services = ReturnType<typeof createServices>
 
 /** Maps a domain TaggedError to the appropriate ORPC error shape. */
-function toORPCError(e: AppError): ORPCError<never, unknown> {
-  switch (e.tag) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function toORPCError(e: AppError): ORPCError<never, any> {
+  switch (e._tag) {
     case 'ClientNotFoundError':
     case 'ProductNotFoundError':
     case 'OrderNotFoundError':
     case 'DebtEntryNotFoundError':
-      return new ORPCError('NOT_FOUND', { message: e.tag, data: e })
+    case 'PaymentNotFoundError':
+      return new ORPCError('NOT_FOUND', { message: e._tag, data: e })
     case 'InvalidPriceForProductError':
     case 'EmptyOrderError':
     case 'OverpaymentError':
     case 'ValidationFailedError':
-      return new ORPCError('BAD_REQUEST', { message: e.tag, data: e })
+      return new ORPCError('BAD_REQUEST', { message: e._tag, data: e })
     case 'DatabaseError':
     default:
-      return new ORPCError('INTERNAL_SERVER_ERROR', { message: e.tag, data: e })
+      return new ORPCError('INTERNAL_SERVER_ERROR', { message: e._tag, data: e })
   }
 }
 

@@ -5,7 +5,7 @@ export const ClientSchema = z.object({
   name: z.string(),
   phone: z.string().nullable(),
   notes: z.string().nullable(),
-  debt: z.number(),
+  balance: z.number(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date()
 })
@@ -46,6 +46,6 @@ export type PaginatedClients = z.infer<typeof PaginatedClientsSchema>
 // clearly named, minimal output shape.
 export const ClientBalanceSchema = z.object({
   clientId: z.number().int(),
-  debt: z.number()
+  balance: z.number()
 })
 export type ClientBalance = z.infer<typeof ClientBalanceSchema>

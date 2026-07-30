@@ -17,7 +17,7 @@ import {
 import { Button } from '#components/ui/button'
 
 const NAV_ITEMS = [
-  { to: '/clients', label: 'العملاء', icon: Users },
+  { to: '/clients', label: 'الزبائن', icon: Users },
   { to: '/products', label: 'المنتجات', icon: Package },
   { to: '/orders', label: 'الطلبات', icon: ShoppingCart },
   { to: '/debt-notebook', label: 'دفتر الديون', icon: BookOpen }

@@ -1,6 +1,6 @@
 import { createRoute, useParams, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ShoppingCart, Wallet, Plus } from 'lucide-react'
+import { ShoppingCart, Wallet, Plus, ArrowRight } from 'lucide-react'
 import { Route as RootRoute } from '../__root'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '../../components/ui/card'
 import { Skeleton } from '../../components/ui/skeleton'
@@ -25,33 +25,42 @@ function ClientDetailPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <Link
+        to="/clients"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowRight className="h-4 w-4" />
+        العودة إلى الزبائن
+      </Link>
+
+      <div className="flex items-center gap-24">
         <div>
           <h1 className="text-2xl font-semibold">{client.name}</h1>
           <p className="text-muted-foreground">{client.phone ?? 'لا يوجد هاتف'}</p>
         </div>
-        <Button asChild>
-          <Link to="/orders/new" search={{ clientId: id }}>
-            <Plus className="h-4 w-4" />
-            طلب جديد
-          </Link>
-        </Button>
+        <Card className="max-w-xs">
+          <CardHeader>
+            <CardTitle className="text-sm text-muted-foreground">الدين المستحق</CardTitle>
+          </CardHeader>
+          <CardContent className="text-xl font-semibold">
+            {balance ? (
+              <span className={balance.debt > 0 ? 'text-destructive' : ''}>
+                {formatDZD(balance.debt)}
+              </span>
+            ) : (
+              <Skeleton className="h-6 w-24" />
+            )}
+          </CardContent>
+        </Card>
+        <div className="mr-auto">
+          <Button asChild>
+            <Link to="/orders/new" search={{ clientId: id }}>
+              <Plus className="h-4 w-4" />
+              طلب جديد
+            </Link>
+          </Button>
+        </div>
       </div>
-
-      <Card className="max-w-xs">
-        <CardHeader>
-          <CardTitle className="text-sm text-muted-foreground">الدين المستحق</CardTitle>
-        </CardHeader>
-        <CardContent className="text-xl font-semibold">
-          {balance ? (
-            <span className={balance.debt > 0 ? 'text-destructive' : ''}>
-              {formatDZD(balance.debt)}
-            </span>
-          ) : (
-            <Skeleton className="h-6 w-24" />
-          )}
-        </CardContent>
-      </Card>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Link to="/clients/$clientId/orders" params={{ clientId: String(id) }}>

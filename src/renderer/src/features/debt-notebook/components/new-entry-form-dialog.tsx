@@ -5,7 +5,8 @@ import {
   DialogContent,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
+  DialogTrigger
 } from '#components/ui/dialog'
 import { Label } from '#components/ui/label'
 import { Input } from '#components/ui/input'
@@ -33,6 +34,9 @@ export default function NewEntryFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">قيد دين جديد</Button>
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>قيد دين جديد</DialogTitle>

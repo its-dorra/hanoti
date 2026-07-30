@@ -11,8 +11,8 @@ interface OrdersContainerProps {
 
 export function OrdersContainer({ clientId }: OrdersContainerProps) {
   const [clientNameQuery, setClientNameQuery] = React.useState('')
-  const [dateFrom, setDateFrom] = React.useState('')
-  const [dateTo, setDateTo] = React.useState('')
+  const [dateFrom, setDateFrom] = React.useState<Date>()
+  const [dateTo, setDateTo] = React.useState<Date>()
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } =
     useInfiniteQuery(

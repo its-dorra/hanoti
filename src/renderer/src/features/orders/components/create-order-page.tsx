@@ -123,7 +123,7 @@ export function CreateOrderPage({ defaultClientId }: CreateOrderPageProps) {
         clientId: String(selectedClient.id)
       }
     }).then(() => {
-      printInvoice(order.id, order.invoiceNumber)
+      printInvoice(order.id)
     })
   }
 

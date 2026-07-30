@@ -93,7 +93,7 @@ export class ClientsService {
   async getBalance(clientId: number): Promise<Result<ClientBalance, AppError>> {
     const clientResult = await this.getById(clientId)
     if (clientResult.isErr()) return Result.err(clientResult.error)
-    return Result.ok({ clientId, debt: clientResult.value.debt })
+    return Result.ok({ clientId, balance: clientResult.value.balance })
   }
 
   /**

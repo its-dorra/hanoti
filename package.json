@@ -20,7 +20,8 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux"
+    "build:linux": "electron-vite build && electron-builder --linux",
+    "db:generate": "bunx drizzle-kit generate"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
@@ -39,11 +40,13 @@
     "bidi-js": "^1.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
     "drizzle-orm": "^0.45.2",
     "electron-updater": "^6.3.9",
     "lucide-react": "^1.24.0",
     "pdfkit": "^0.19.1",
     "radix-ui": "^1.6.2",
+    "react-day-picker": "^10.0.1",
     "shadcn": "^4.13.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.2",

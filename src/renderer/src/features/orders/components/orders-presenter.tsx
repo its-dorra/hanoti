@@ -9,6 +9,9 @@ import { formatDZD } from '@/lib/utils'
 import type { Order } from '../../../../../shared/schemas/order.schema'
 import { printInvoice } from '../utils'
 
+import { Label } from '#components/ui/label'
+import { DatePicker } from '#components/date-picker'
+
 interface OrdersPresenterProps {
   orders: Order[]
   isLoading: boolean
@@ -20,10 +23,10 @@ interface OrdersPresenterProps {
   showClientSearch: boolean
   clientNameQuery: string
   onClientNameQueryChange: (query: string) => void
-  dateFrom: string
-  onDateFromChange: (date: string) => void
-  dateTo: string
-  onDateToChange: (date: string) => void
+  dateFrom: Date | undefined
+  onDateFromChange: (date: Date | undefined) => void
+  dateTo: Date | undefined
+  onDateToChange: (date: Date | undefined) => void
 }
 
 export function OrdersPresenter({
@@ -70,23 +73,13 @@ export function OrdersPresenter({
         )}
 
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">من تاريخ</label>
-          <Input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => onDateFromChange(e.target.value)}
-            className="w-40"
-          />
+          <Label className="text-xs text-muted-foreground">من تاريخ</Label>
+          <DatePicker date={dateFrom} setDate={onDateFromChange} />
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">إلى تاريخ</label>
-          <Input
-            type="date"
-            value={dateTo}
-            onChange={(e) => onDateToChange(e.target.value)}
-            className="w-40"
-          />
+          <Label className="text-xs text-muted-foreground">إلى تاريخ</Label>
+          <DatePicker date={dateTo} setDate={onDateToChange} />
         </div>
       </div>
 
@@ -121,7 +114,7 @@ export function OrdersPresenter({
                 {orders.map((order) => (
                   <TableRow key={order.id}>
                     <TableCell className="font-medium">
-                      #{order.invoiceNumber.toString().slice(0, 10)}
+                      #{order.id.toString().slice(0, 10)}
                     </TableCell>
                     <TableCell>
                       <Link
@@ -136,11 +129,7 @@ export function OrdersPresenter({
                     <TableCell>{formatDZD(order.subtotal)}</TableCell>
 
                     <TableCell className="text-end">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => printInvoice(order.id, order.invoiceNumber)}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => printInvoice(order.id)}>
                         <Printer className="h-4 w-4" />
                       </Button>
                     </TableCell>

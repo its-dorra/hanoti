@@ -63,7 +63,7 @@ function DebtNotebookPage() {
           search={(s) => ({ ...s, query: '', type: 'buyer' })}
           activeProps={{ className: 'bg-primary text-primary-foreground' }}
         >
-          <Button variant="ghost">دين</Button>
+          <Button variant="ghost">ديطاي</Button>
         </Link>
         <Link
           to="."
@@ -72,7 +72,7 @@ function DebtNotebookPage() {
           search={(s) => ({ ...s, query: '', type: 'seller' })}
           activeProps={{ className: 'bg-primary text-primary-foreground ' }}
         >
-          <Button variant="ghost">بيع</Button>
+          <Button variant="ghost">جملة</Button>
         </Link>
       </div>
 

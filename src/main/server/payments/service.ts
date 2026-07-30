@@ -1,9 +1,10 @@
 import { Result } from 'better-result'
 import { PaymentsDataAccess } from './data-access'
 import { ClientsService } from '../clients/service'
-import { DatabaseError, type AppError } from '../../lib/errors'
+import { DatabaseError, PaymentNotFoundError, type AppError } from '../../lib/errors'
 import type { Payment, RecordPaymentInput } from '../../../shared/schemas/payment.schema'
 import type { AppDb, AppTransaction } from '../../db/client'
+import { ClientLedgersService } from '../ledgers/service'
 
 /**
  * Payments are entirely independent of orders — recording one is a
@@ -18,30 +19,19 @@ export class PaymentsService {
   constructor(
     private readonly dataAccess: PaymentsDataAccess,
     private readonly db: AppDb,
-    // Cross-service call per the architecture rule: PaymentsService talks
-    // to ClientsService rather than reading/writing the clients table
-    // directly.
-    private readonly clientsService: ClientsService
+    private readonly clientsService: ClientsService,
+    private readonly ledgersService: ClientLedgersService
   ) {}
 
-  async listForClient(clientId: number): Promise<Result<Payment[], AppError>> {
-    try {
-      const rows = await this.dataAccess.findByClient(clientId)
-      return Result.ok(rows)
-    } catch (cause) {
-      return Result.err(new DatabaseError({ message: 'Failed to list payments', cause }))
-    }
-  }
+  // async listForClient(clientId: number): Promise<Result<Payment[], AppError>> {
+  //   try {
+  //     const rows = await this.dataAccess.findByClient(clientId)
+  //     return Result.ok(rows)
+  //   } catch (cause) {
+  //     return Result.err(new DatabaseError({ message: 'Failed to list payments', cause }))
+  //   }
+  // }
 
-  /**
-   * The actual atomic unit of work: insert the payment row (at the given
-   * timestamp) and decrement the client's `debt` by the same amount.
-   * `tx` is a required first argument — callers decide the transaction
-   * boundary: `recordPayment` below opens its own for a standalone
-   * payment, while `OrdersService.createOrder` passes its own transaction
-   * when a deposit is entered alongside a new order, so the order, its
-   * stock/debt effects, and this payment all commit or roll back together.
-   */
   async recordPaymentAt(
     tx: AppTransaction,
     input: RecordPaymentInput,
@@ -76,6 +66,26 @@ export class PaymentsService {
       const payment = await this.db.transaction(async (tx) => {
         const result = await this.recordPaymentAt(tx, input, new Date())
         if (result.isErr()) throw result.error
+
+        // create a ledger entry for the payment, reflecting the new balance after the deposit
+        const ledgerResult = await this.ledgersService.createLedgerEntry(tx, {
+          clientId: input.clientId,
+          referenceId: result.value.id,
+          referenceType: 'payment',
+          amount: input.amount,
+          balanceBefore: clientResult.value.balance,
+          balanceAfter: clientResult.value.balance - input.amount
+        })
+
+        if (ledgerResult.isErr()) throw ledgerResult.error
+
+        const debtAdjustmentResult = await this.clientsService.adjustDebt(
+          tx,
+          input.clientId,
+          -input.amount
+        )
+        if (debtAdjustmentResult.isErr()) throw debtAdjustmentResult.error
+
         return result.value
       })
       return Result.ok(payment)
@@ -87,25 +97,25 @@ export class PaymentsService {
     }
   }
 
-  /**
-   * Looks up how much was deposited at the exact moment an order was
-   * created — by matching timestamps, since payments carry no `orderId`.
-   * Sums in application code rather than with SQL `SUM()`: this is a
-   * tiny, already-filtered result set (in practice 0 or 1 rows, since
-   * only one deposit is ever recorded per order-creation moment), not a
-   * table-wide aggregation, so there's no query-cost reason to push the
-   * sum into SQL.
-   */
-  async getDepositAtTimestamp(
-    clientId: number,
-    timestamp: Date
-  ): Promise<Result<number, AppError>> {
+  async deletePayment(tx: AppTransaction, paymentId: number): Promise<Result<Payment, AppError>> {
+    const existingPayment = await this.dataAccess.getById(paymentId)
+    if (!existingPayment) return Result.err(new PaymentNotFoundError({ paymentId }))
+
     try {
-      const rows = await this.dataAccess.findByClientAtTimestamp(clientId, timestamp)
-      const total = rows.reduce((sum, row) => sum + row.amount, 0)
-      return Result.ok(total)
-    } catch (cause) {
-      return Result.err(new DatabaseError({ message: 'Failed to look up deposit', cause }))
+      await this.dataAccess.delete(tx, paymentId)
+      const debtResult = await this.clientsService.adjustDebt(
+        tx,
+        existingPayment.clientId,
+        existingPayment.amount
+      )
+      if (debtResult.isErr()) throw debtResult.error
+
+      return Result.ok(existingPayment)
+    } catch (thrown) {
+      if (thrown && typeof thrown === 'object' && 'tag' in thrown) {
+        return Result.err(thrown as unknown as AppError)
+      }
+      return Result.err(new DatabaseError({ message: 'Failed to delete payment', cause: thrown }))
     }
   }
 }

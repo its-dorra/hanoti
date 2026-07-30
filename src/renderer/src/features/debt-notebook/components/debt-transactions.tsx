@@ -70,7 +70,7 @@ export default function DebtTransactions({ debtEntryId }: { debtEntryId: number 
                   {transaction.date.toLocaleTimeString('fr', { hourCycle: 'h24' })}
                 </TableCell>
                 <TableCell>{transaction.note ?? '—'}</TableCell>
-                {today < dayAfter && (
+                {today <= dayAfter && (
                   <TableCell className="text-end">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

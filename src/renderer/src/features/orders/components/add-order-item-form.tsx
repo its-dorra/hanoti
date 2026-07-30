@@ -78,7 +78,13 @@ export function AddOrderItemForm({ onAdd }: AddOrderItemFormProps) {
   }
 
   return (
-    <div className="space-y-3">
+    <form
+      className="space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault()
+        handleAdd()
+      }}
+    >
       <ProductSearchSelect
         selectedProduct={product}
         onSelect={handleProductSelect}
@@ -91,6 +97,7 @@ export function AddOrderItemForm({ onAdd }: AddOrderItemFormProps) {
             <Label htmlFor="order-item-quantity">الكمية</Label>
 
             <Input
+              autoFocus
               id="order-item-quantity"
               type="number"
               min={1}
@@ -156,13 +163,13 @@ export function AddOrderItemForm({ onAdd }: AddOrderItemFormProps) {
           </div>
 
           <div className="col-span-2">
-            <Button type="button" className="w-full" disabled={!canAdd} onClick={handleAdd}>
+            <Button type="submit" className="w-full" disabled={!canAdd}>
               <Plus className="h-4 w-4" />
               إضافة
             </Button>
           </div>
         </div>
       )}
-    </div>
+    </form>
   )
 }

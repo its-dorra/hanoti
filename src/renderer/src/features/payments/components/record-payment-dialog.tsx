@@ -10,42 +10,66 @@ import { Button } from '../../../components/ui/button'
 import { Input } from '../../../components/ui/input'
 import { Label } from '../../../components/ui/label'
 import { useRecordPayment } from '../hooks/use-record-payment'
+import { Payment } from 'src/shared/schemas/payment.schema'
+import { useUpdatePayment } from '../hooks/use-update-payment'
 
-interface RecordPaymentDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  clientId: number
-}
+type RecordPaymentDialogProps =
+  | { type: 'update'; payment: Payment; onClose: () => void }
+  | {
+      type: 'create'
+      open: boolean
+      onOpenChange: (open: boolean) => void
+      clientId: number
+    }
 
 /**
  * Records a standalone payment against the client's running debt balance.
  * Deliberately has no notion of "which order" — payments are independent
  * of orders entirely (see PaymentsService).
  */
-export function RecordPaymentDialog({ open, onOpenChange, clientId }: RecordPaymentDialogProps) {
+export function RecordPaymentDialog(props: RecordPaymentDialogProps) {
   const recordPayment = useRecordPayment()
+  const updatePayment = useUpdatePayment()
 
   const form = useForm({
     defaultValues: {
-      amount: 0,
-      note: ''
+      amount: props.type === 'update' ? props.payment.amount : 0,
+      note: props.type === 'update' ? props.payment.note || '' : ''
     },
     onSubmit: async ({ value }) => {
-      await recordPayment.mutateAsync({
-        clientId,
-        amount: value.amount,
-        note: value.note || null
-      })
+      if (props.type === 'update') {
+        await updatePayment.mutateAsync({
+          paymentId: props.payment.id,
+          data: {
+            amount: value.amount,
+            note: value.note || null,
+            clientId: props.payment.clientId
+          }
+        })
+      } else {
+        await recordPayment.mutateAsync({
+          clientId: props.clientId,
+          amount: value.amount,
+          note: value.note || null
+        })
+      }
       form.reset()
-      onOpenChange(false)
+      if (props.type === 'update') {
+        props.onClose()
+      } else {
+        props.onOpenChange(false)
+      }
     }
   })
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={props.type === 'create' ? props.open : true}
+      onOpenChange={props.type === 'create' ? props.onOpenChange : props.onClose}
+    >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>تسجيل دفعة</DialogTitle>
+          <DialogTitle>{props.type === 'update' ? 'تعديل دفعة' : 'تسجيل دفعة'}</DialogTitle>
         </DialogHeader>
 
         <form
@@ -93,11 +117,21 @@ export function RecordPaymentDialog({ open, onOpenChange, clientId }: RecordPaym
           </form.Field>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                props.type === 'create' ? props.onOpenChange(false) : props.onClose()
+              }
+            >
               إلغاء
             </Button>
             <Button type="submit" disabled={recordPayment.isPending}>
-              {recordPayment.isPending ? 'جارٍ التسجيل...' : 'تسجيل الدفعة'}
+              {recordPayment.isPending
+                ? 'جارٍ التسجيل...'
+                : props.type === 'update'
+                  ? 'تعديل الدفعة'
+                  : 'تسجيل الدفعة'}
             </Button>
           </DialogFooter>
         </form>

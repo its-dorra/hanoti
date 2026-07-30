@@ -278,11 +278,11 @@ export function generateInvoicePdf(
     })
     summaryY += SUMMARY_TITLE_HEIGHT
 
-    const remaining = order.subtotal - depositAmount
+    const remaining = client.debt
     const summaryRows: Array<[string, string]> = [
       ['الإجمالي', order.subtotal.toFixed(2)],
-      ['المبلغ المودع', depositAmount.toFixed(2)],
-      ['المتبقي', remaining.toFixed(2)]
+      ['المبلغ المدفوع', depositAmount.toFixed(2)],
+      ['الدين المتبقي', remaining.toFixed(2)]
     ]
 
     doc.fontSize(9)

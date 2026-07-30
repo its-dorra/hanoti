@@ -12,7 +12,7 @@ export const clients = sqliteTable(
     name: text('name').notNull(),
     phone: text('phone'),
     notes: text('notes'),
-    debt: real('debt').notNull().default(0),
+    balance: integer('debt').notNull().default(0),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -58,8 +58,6 @@ export const orders = sqliteTable(
   'orders',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    // Stable, human-readable, sequential invoice number (separate from PK)
-    invoiceNumber: integer('invoice_number').notNull(),
     clientId: integer('client_id')
       .notNull()
       .references(() => clients.id, { onDelete: 'cascade' }),
@@ -117,6 +115,21 @@ export const payments = sqliteTable(
   },
   (table) => [index('payments_client_id_payment_date_idx').on(table.clientId, table.paymentDate)]
 )
+
+export const clientLedgers = sqliteTable('client_ledgers', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  clientId: integer('client_id')
+    .notNull()
+    .references(() => clients.id, { onDelete: 'cascade' }),
+  referenceId: integer('reference_id').notNull(),
+  referenceType: text('reference_type', { enum: ['order', 'payment'] }).notNull(),
+  amount: integer('amount').notNull(),
+  balanceBefore: integer('balance_before').notNull(),
+  balanceAfter: integer('balance_after').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' })
+    .notNull()
+    .default(sql`(unixepoch())`)
+})
 
 // ---------------------------------------------------------------------------
 // MODULE 2 — Simple Debt Notebook (fully isolated, no FK to clients above)

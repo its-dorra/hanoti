@@ -7,16 +7,6 @@ import type {
   UpdateDebtTransactionInput
 } from '../../../shared/schemas/debt-notebook.schema'
 
-/**
- * Deliberately isolated from ClientsDataAccess — the Debt Notebook module
- * does not share clients with the grocery management module (client names
- * here are free text, not a foreign key).
- *
- * Explicit column lists here too, for the same reason as every other
- * data-access file: the returned shape matches `DebtEntry`/
- * `DebtTransaction` exactly, so the service needs no cast.
- */
-
 const DEBT_ENTRY_COLUMNS = {
   id: debtEntries.id,
   clientName: debtEntries.clientName,

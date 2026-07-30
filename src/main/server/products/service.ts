@@ -6,7 +6,7 @@ import type {
   UpdateProductInput,
   Product
 } from '../../../shared/schemas/product.schema'
-import type { AppDb } from '../../db/client'
+import type { AppTransaction } from '../../db/client'
 
 /**
  * No `as unknown as Product` casts here: `ProductsDataAccess` selects the
@@ -78,7 +78,7 @@ export class ProductsService {
    * success/failure here, never reads the returned value.
    */
   async reserveStockForOrder(
-    tx: AppDb,
+    tx: AppTransaction,
     productId: number,
     quantityOrdered: number
   ): Promise<Result<{ id: number; quantity: number }, AppError>> {

@@ -49,6 +49,10 @@ export class DatabaseError extends TaggedError('DatabaseError')<{
   cause?: unknown
 }>() {}
 
+export class PaymentNotFoundError extends TaggedError('PaymentNotFoundError')<{
+  paymentId: number
+}>() {}
+
 export type AppError =
   | ClientNotFoundError
   | ProductNotFoundError
@@ -59,3 +63,4 @@ export type AppError =
   | DebtEntryNotFoundError
   | ValidationFailedError
   | DatabaseError
+  | PaymentNotFoundError

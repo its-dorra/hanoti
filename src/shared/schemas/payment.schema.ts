@@ -17,7 +17,6 @@ export type Payment = z.infer<typeof PaymentSchema>
 export const RecordPaymentSchema = z.object({
   clientId: z.number().int(),
   amount: z.number().positive(),
-  method: PaymentMethodSchema.default('cash'),
   note: z.string().trim().min(1).nullable().optional()
 })
 export type RecordPaymentInput = z.infer<typeof RecordPaymentSchema>

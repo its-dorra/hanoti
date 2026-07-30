@@ -1,4 +1,4 @@
-import { and, eq, desc } from 'drizzle-orm'
+import { and, eq, desc, gte } from 'drizzle-orm'
 import type { AppDb, AppTransaction } from '../../db/client'
 import { payments } from '../../db/schema'
 import type { RecordPaymentInput } from '../../../shared/schemas/payment.schema'
@@ -42,6 +42,18 @@ export class PaymentsDataAccess {
       .where(and(eq(payments.clientId, clientId), eq(payments.paymentDate, timestamp)))
   }
 
+  async findTheLastByClient(clientId: number) {
+    const lastWeekDate = new Date()
+    lastWeekDate.setDate(lastWeekDate.getDate() - 7)
+    return this.db
+      .select(PAYMENT_COLUMNS)
+      .from(payments)
+      .where(and(eq(payments.clientId, clientId), gte(payments.paymentDate, lastWeekDate)))
+      .orderBy(desc(payments.paymentDate))
+      .limit(1)
+      .then((rows) => rows[0] ?? null)
+  }
+
   /**
    * Records a standalone payment against a client's balance, with an
    * explicit `timestamp` rather than letting the column default apply.
@@ -59,6 +71,34 @@ export class PaymentsDataAccess {
         paymentDate: timestamp,
         createdAt: timestamp
       })
+      .returning(PAYMENT_COLUMNS)
+    return row
+  }
+
+  async getById(paymentId: number) {
+    const [row] = await this.db
+      .select(PAYMENT_COLUMNS)
+      .from(payments)
+      .where(eq(payments.id, paymentId))
+    return row ?? null
+  }
+
+  async update(tx: AppTransaction, paymentId: number, input: RecordPaymentInput) {
+    const [row] = await tx
+      .update(payments)
+      .set({
+        amount: input.amount,
+        note: input.note ?? null
+      })
+      .where(eq(payments.id, paymentId))
+      .returning(PAYMENT_COLUMNS)
+    return row
+  }
+
+  async delete(tx: AppTransaction, paymentId: number) {
+    const [row] = await tx
+      .delete(payments)
+      .where(eq(payments.id, paymentId))
       .returning(PAYMENT_COLUMNS)
     return row
   }

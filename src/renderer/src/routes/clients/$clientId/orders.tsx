@@ -14,7 +14,7 @@ function ClientOrdersRoute() {
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowRight className="h-4 w-4" />
-        العودة إلى ملف العميل
+        العودة إلى ملف الزبون
       </Link>
       <OrdersContainer clientId={id} />
     </div>

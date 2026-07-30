@@ -1,5 +1,5 @@
 import { eq, like } from 'drizzle-orm'
-import type { AppDb } from '../../db/client'
+import type { AppDb, AppTransaction } from '../../db/client'
 import { products, productPrices } from '../../db/schema'
 import type { CreateProductInput, UpdateProductInput } from '../../../shared/schemas/product.schema'
 
@@ -123,7 +123,7 @@ export class ProductsDataAccess {
    * than an optional trailing one — there's no standalone call site that
    * would need a non-transactional variant.
    */
-  async adjustStock(tx: AppDb, productId: number, delta: number) {
+  async adjustStock(tx: AppTransaction, productId: number, delta: number) {
     const [current] = await tx
       .select({ quantity: products.quantity })
       .from(products)

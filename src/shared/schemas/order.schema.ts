@@ -13,7 +13,6 @@ export type OrderItem = z.infer<typeof OrderItemSchema>
 
 export const OrderSchema = z.object({
   id: z.number().int(),
-  invoiceNumber: z.number().int(),
   clientId: z.number().int(),
   orderDate: z.coerce.date(),
   subtotal: z.number().nonnegative(),

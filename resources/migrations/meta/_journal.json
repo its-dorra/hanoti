@@ -43,6 +43,13 @@
       "when": 1784565683916,
       "tag": "0005_conscious_paladin",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1785407234111,
+      "tag": "0006_hesitant_justin_hammer",
+      "breakpoints": true
     }
   ]
 }

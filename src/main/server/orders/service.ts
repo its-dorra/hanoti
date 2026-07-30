@@ -3,7 +3,7 @@ import { OrdersDataAccess, type NewOrderItemRow } from './data-access'
 import { ClientsService } from '../clients/service'
 import { ProductsService } from '../products/service'
 import { PaymentsService } from '../payments/service'
-import type { AppDb } from '../../db/client'
+import type { AppDb, AppTransaction } from '../../db/client'
 import {
   EmptyOrderError,
   InvalidPriceForProductError,
@@ -13,32 +13,25 @@ import {
 } from '../../lib/errors'
 import type {
   CreateOrderInput,
-  UpdateOrderInput,
-  OrderFilterInput,
-  Order,
-  PaginatedOrders
+  // UpdateOrderInput,
+  // OrderFilterInput,
+  Order
+  // PaginatedOrders
 } from '../../../shared/schemas/order.schema'
+import { ClientLedgersService } from '../ledgers/service'
 
 interface ResolvedItem extends NewOrderItemRow {
   quantity: number
 }
 
-/**
- * Orders are NOT responsible for payment in the schema sense — there is
- * no payment field on the order row and no `orderId` on payments. But the
- * cashier can still enter a deposit *while* creating an order, as a
- * convenience: that deposit is written as a genuinely separate Payment
- * row, in the same transaction, correlated with the order purely by
- * sharing one exact timestamp (no FK). No `as unknown as Order` casts:
- * `OrdersDataAccess` selects exactly the columns `Order`/`OrderItem` need.
- */
 export class OrdersService {
   constructor(
     private readonly dataAccess: OrdersDataAccess,
     private readonly db: AppDb,
     private readonly clientsService: ClientsService,
     private readonly productsService: ProductsService,
-    private readonly paymentsService: PaymentsService
+    private readonly paymentsService: PaymentsService,
+    private readonly ledgersService: ClientLedgersService
   ) {}
 
   async list(filter: OrderFilterInput): Promise<Result<PaginatedOrders, AppError>> {
@@ -63,6 +56,16 @@ export class OrdersService {
   async getById(id: number): Promise<Result<Order, AppError>> {
     try {
       const row = await this.dataAccess.findByIdWithItems(id)
+      if (!row) return Result.err(new OrderNotFoundError({ orderId: id }))
+      return Result.ok(row)
+    } catch (cause) {
+      return Result.err(new DatabaseError({ message: 'Failed to fetch order', cause }))
+    }
+  }
+
+  async getByIdWithoutItems(id: number): Promise<Result<Order, AppError>> {
+    try {
+      const row = await this.dataAccess.findByIdWithoutItems(id)
       if (!row) return Result.err(new OrderNotFoundError({ orderId: id }))
       return Result.ok(row)
     } catch (cause) {
@@ -123,19 +126,14 @@ export class OrdersService {
     const resolvedItems = resolvedResult.value
 
     const subtotal = resolvedItems.reduce((sum, i) => sum + i.lineTotal, 0)
-    // Shared by the order row and, if a deposit is entered, the payment
-    // row — this exact equality is how the invoice PDF later finds "the
-    // deposit made when this order was created" without any FK.
+
     const timestamp = new Date()
 
     try {
       const order = await this.db.transaction(async (tx) => {
-        const appTx = tx as unknown as AppDb
-
-        const invoiceNumber = await this.dataAccess.getNextInvoiceNumber(appTx)
+        const appTx = tx
 
         const orderRow = await this.dataAccess.insertOrder(appTx, {
-          invoiceNumber,
           clientId: input.clientId,
           subtotal,
           timestamp
@@ -152,6 +150,17 @@ export class OrdersService {
           if (stockResult.isErr()) throw stockResult.error
         }
 
+        // create a ledger entry for the order, reflecting the new debt incurred by the client
+        const orderLedgerResult = await this.ledgersService.createLedgerEntry(appTx, {
+          clientId: input.clientId,
+          referenceId: orderRow.id,
+          referenceType: 'order',
+          amount: subtotal,
+          balanceBefore: clientResult.value.balance,
+          balanceAfter: clientResult.value.balance + subtotal
+        })
+        if (orderLedgerResult.isErr()) throw orderLedgerResult.error
+
         // The client now owes `subtotal` more — a single incremental
         // UPDATE, not a recomputation over every order/payment.
         const debtResult = await this.clientsService.adjustDebt(appTx, input.clientId, subtotal)
@@ -160,10 +169,30 @@ export class OrdersService {
         if (input.depositAmount > 0) {
           const paymentResult = await this.paymentsService.recordPaymentAt(
             appTx,
-            { clientId: input.clientId, amount: input.depositAmount, method: 'cash', note: null },
+            { clientId: input.clientId, amount: input.depositAmount, note: null },
             timestamp
           )
           if (paymentResult.isErr()) throw paymentResult.error
+
+          // create a ledger entry for the payment, reflecting the new balance after the deposit
+          const paymentLedgerResult = await this.ledgersService.createLedgerEntry(appTx, {
+            clientId: input.clientId,
+            referenceId: paymentResult.value.id,
+            referenceType: 'payment',
+            amount: input.depositAmount,
+            balanceBefore: clientResult.value.balance + subtotal,
+            balanceAfter: clientResult.value.balance + subtotal - input.depositAmount
+          })
+          if (paymentLedgerResult.isErr()) throw paymentLedgerResult.error
+
+          // The client now owes `depositAmount` less — a single incremental
+          // UPDATE, not a recomputation over every order/payment.
+          const debtAdjustmentResult = await this.clientsService.adjustDebt(
+            appTx,
+            input.clientId,
+            -input.depositAmount
+          )
+          if (debtAdjustmentResult.isErr()) throw debtAdjustmentResult.error
         }
 
         return { ...orderRow, items: itemRows }
@@ -171,9 +200,6 @@ export class OrdersService {
 
       return Result.ok(order)
     } catch (thrown) {
-      // Errors thrown from inside the transaction (e.g. stockResult.isErr())
-      // are already AppError instances — surface them as-is; anything else
-      // is an unexpected DB failure.
       if (thrown && typeof thrown === 'object' && 'tag' in thrown) {
         return Result.err(thrown as unknown as AppError)
       }
@@ -181,75 +207,101 @@ export class OrdersService {
     }
   }
 
-  /**
-   * Full item replacement for an existing order. Restores stock for the
-   * old line items, resolves + reserves stock for the new ones, adjusts
-   * the client's debt by the difference between old and new subtotal, and
-   * recomputes the subtotal — all inside one transaction. Never touches
-   * payments (a deposit is only ever entered at creation time).
-   */
-  async updateOrder(input: UpdateOrderInput): Promise<Result<Order, AppError>> {
-    const existingResult = await this.getById(input.id)
+  // async updateOrder(input: UpdateOrderInput): Promise<Result<Order, AppError>> {
+  //   const existingResult = await this.getById(input.id)
+  //   if (existingResult.isErr()) return Result.err(existingResult.error)
+  //   const existing = existingResult.value
+
+  //   if (!input.items) return Result.ok(existing)
+
+  //   const resolvedResult = await this.resolveItems(input.items)
+  //   if (resolvedResult.isErr()) return Result.err(resolvedResult.error)
+  //   const resolvedItems = resolvedResult.value
+  //   const newSubtotal = resolvedItems.reduce((sum, i) => sum + i.lineTotal, 0)
+  //   const subtotalDelta = newSubtotal - existing.subtotal
+
+  //   try {
+  //     const order = await this.db.transaction(async (tx) => {
+  //       const appTx = tx
+
+  //       // Give back stock consumed by the old items...
+  //       for (const oldItem of existing.items) {
+  //         const restoreResult = await this.productsService.reserveStockForOrder(
+  //           appTx,
+  //           oldItem.productId,
+  //           -oldItem.quantity // negative delta = restore
+  //         )
+  //         if (restoreResult.isErr()) throw restoreResult.error
+  //       }
+
+  //       // ...then reserve stock for the new items.
+  //       for (const newItem of resolvedItems) {
+  //         const reserveResult = await this.productsService.reserveStockForOrder(
+  //           appTx,
+  //           newItem.productId,
+  //           newItem.quantity
+  //         )
+  //         if (reserveResult.isErr()) throw reserveResult.error
+  //       }
+
+  //       const updated = await this.dataAccess.replaceItems(
+  //         appTx,
+  //         input.id,
+  //         resolvedItems,
+  //         newSubtotal
+  //       )
+
+  //       if (subtotalDelta !== 0) {
+  //         const debtResult = await this.clientsService.adjustDebt(
+  //           appTx,
+  //           existing.clientId,
+  //           subtotalDelta
+  //         )
+  //         if (debtResult.isErr()) throw debtResult.error
+  //       }
+
+  //       return updated
+  //     })
+
+  //     return this.getById(order.id)
+  //   } catch (thrown) {
+  //     if (thrown && typeof thrown === 'object' && 'tag' in thrown) {
+  //       return Result.err(thrown as unknown as AppError)
+  //     }
+  //     return Result.err(new DatabaseError({ message: 'Failed to update order', cause: thrown }))
+  //   }
+  // }
+
+  async deleteOrder(tx: AppTransaction, id: number): Promise<Result<true, AppError>> {
+    const existingResult = await this.getById(id)
     if (existingResult.isErr()) return Result.err(existingResult.error)
     const existing = existingResult.value
 
-    if (!input.items) return Result.ok(existing)
-
-    const resolvedResult = await this.resolveItems(input.items)
+    const resolvedResult = await this.resolveItems(existing.items)
     if (resolvedResult.isErr()) return Result.err(resolvedResult.error)
     const resolvedItems = resolvedResult.value
-    const newSubtotal = resolvedItems.reduce((sum, i) => sum + i.lineTotal, 0)
-    const subtotalDelta = newSubtotal - existing.subtotal
 
     try {
-      const order = await this.db.transaction(async (tx) => {
-        const appTx = tx as unknown as AppDb
+      const appTx = tx
 
-        // Give back stock consumed by the old items...
-        for (const oldItem of existing.items) {
-          const restoreResult = await this.productsService.reserveStockForOrder(
-            appTx,
-            oldItem.productId,
-            -oldItem.quantity // negative delta = restore
-          )
-          if (restoreResult.isErr()) throw restoreResult.error
-        }
-
-        // ...then reserve stock for the new items.
-        for (const newItem of resolvedItems) {
-          const reserveResult = await this.productsService.reserveStockForOrder(
-            appTx,
-            newItem.productId,
-            newItem.quantity
-          )
-          if (reserveResult.isErr()) throw reserveResult.error
-        }
-
-        const updated = await this.dataAccess.replaceItems(
+      // Give back stock consumed by the old items...
+      for (const oldItem of resolvedItems) {
+        const restoreResult = await this.productsService.reserveStockForOrder(
           appTx,
-          input.id,
-          resolvedItems,
-          newSubtotal
+          oldItem.productId,
+          -oldItem.quantity // negative delta = restore
         )
+        if (restoreResult.isErr()) throw restoreResult.error
+      }
 
-        if (subtotalDelta !== 0) {
-          const debtResult = await this.clientsService.adjustDebt(
-            appTx,
-            existing.clientId,
-            subtotalDelta
-          )
-          if (debtResult.isErr()) throw debtResult.error
-        }
+      await this.dataAccess.deleteOrder(appTx, id)
 
-        return updated
-      })
-
-      return this.getById(order.id)
+      return Result.ok(true)
     } catch (thrown) {
       if (thrown && typeof thrown === 'object' && 'tag' in thrown) {
         return Result.err(thrown as unknown as AppError)
       }
-      return Result.err(new DatabaseError({ message: 'Failed to update order', cause: thrown }))
+      return Result.err(new DatabaseError({ message: 'Failed to delete order', cause: thrown }))
     }
   }
 }
