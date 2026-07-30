@@ -28,43 +28,4 @@ export const ordersRouter = os.router({
       }
     })
   })
-
-  // getInvoicePdf: os
-  //   .input(z.object({ orderId: z.number().int() }))
-  //   .handler(async ({ input, context }) => {
-  //     const orderResult = await context.services.orders.getById(input.orderId)
-  //     const order = orderResult.match({
-  //       ok: (v) => v,
-  //       err: (e) => {
-  //         throw context.toORPCError(e)
-  //       }
-  //     })
-
-  //     const clientResult = await context.services.clients.getById(order.clientId)
-  //     const client = clientResult.match({
-  //       ok: (v) => v,
-  //       err: (e) => {
-  //         throw context.toORPCError(e)
-  //       }
-  //     })
-
-  //     const depositResult = await context.services.payments.getLastDeposit(order.clientId)
-  //     const depositAmount = depositResult.match({
-  //       ok: (v) => v,
-  //       err: (e) => {
-  //         throw context.toORPCError(e)
-  //       }
-  //     })
-
-  //     const pdfBuffer = await generateInvoicePdf(
-  //       order,
-  //       client,
-  //       depositAmount,
-  //       context.arabicFontPath
-  //     )
-  //     return {
-  //       filename: `invoice-${order.invoiceNumber}.pdf`,
-  //       base64: pdfBuffer.toString('base64')
-  //     }
-  //   })
 })

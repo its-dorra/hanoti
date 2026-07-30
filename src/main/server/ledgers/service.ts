@@ -96,7 +96,7 @@ export class ClientLedgersService {
             const orderResult = await this.ordersService.deleteOrder(tx, lastLedger.referenceId)
             if (orderResult.isErr()) throw orderResult.error
 
-            return true
+            return Result.ok(true)
           }
 
           case 'payment': {
@@ -106,11 +106,13 @@ export class ClientLedgersService {
             )
             if (paymentResult.isErr()) throw paymentResult.error
 
-            return true
+            return Result.ok(true)
           }
 
           default:
-            throw new Error(`Unknown reference type ${lastLedger.referenceType as never}`)
+            return Result.err(
+              new DatabaseError({ message: 'Unknown reference type for last ledger entry' })
+            )
         }
       })
     } catch (e) {
@@ -120,6 +122,16 @@ export class ClientLedgersService {
       return Result.err(
         new DatabaseError({ message: 'Failed to delete last ledger entry', cause: e })
       )
+    }
+  }
+
+  async getResumeBalanceByDate(clientId: number, resumeDate: Date) {
+    try {
+      const result = await this.dataAccess.getResumeBalanceByDate(clientId, resumeDate)
+
+      return Result.ok(result)
+    } catch (e) {
+      return Result.err(new DatabaseError({ message: 'Failed to get resume balance', cause: e }))
     }
   }
 }

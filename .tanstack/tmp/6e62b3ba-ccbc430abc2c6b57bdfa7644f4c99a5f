@@ -7,7 +7,6 @@ import { Skeleton } from '../../components/ui/skeleton'
 import { Button } from '../../components/ui/button'
 import { formatDZD } from '../../lib/utils'
 import { orpc } from '@renderer/integrations/orpc'
-import z from 'zod'
 
 function ClientDetailPage() {
   const { clientId } = useParams({ from: '/clients/$clientId/' })
@@ -61,9 +60,5 @@ function ClientDetailPage() {
 }
 
 export const Route = createFileRoute('/clients/$clientId/')({
-  validateSearch: z.object({
-    before: z.date().optional(),
-    type: z.enum(['all', 'payment', 'order']).default('all')
-  }),
   component: ClientDetailPage
 })

@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit'
 import type { Order } from '../../../../shared/schemas/order.schema'
 import type { Client } from '../../../../shared/schemas/client.schema'
 import { shapeArabicLine, wrapAndShapeArabic } from './arabic-text'
+import { LedgerEntry } from '../../ledgers/types'
 
 /**
  * Renders a printable invoice PDF and returns it as a Buffer.
@@ -51,15 +52,6 @@ const HEADER_ROW_HEIGHT = 22
 
 const ARABIC_FONT = 'Arabic'
 
-/**
- * Neutralizes pdfkit's internal auto-page-break check by zeroing its
- * notion of the bottom margin (`maxY()` becomes `page.height`, so it
- * never decides on its own that a doc.text() call needs a new page).
- * Our own `bottomLimit`/`FOOTER_RESERVE` logic remains the only thing
- * that triggers `doc.addPage()`. Must be called once up front AND again
- * after every `doc.addPage()`, since addPage() re-reads the original
- * margins from the constructor options.
- */
 function disableAutoPageBreak(doc: PDFKit.PDFDocument): void {
   doc.page.margins.bottom = 0
 }
@@ -67,8 +59,8 @@ function disableAutoPageBreak(doc: PDFKit.PDFDocument): void {
 export function generateInvoicePdf(
   order: Order,
   client: Client,
-  depositAmount: number,
-  arabicFontPath: string
+  arabicFontPath: string,
+  resumeBalance?: LedgerEntry
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
@@ -160,7 +152,7 @@ export function generateInvoicePdf(
         width: INFO_LABEL_WIDTH,
         align: 'right'
       })
-      doc.text(order.invoiceNumber.toString().slice(0, 10), pageLeft, currentY, {
+      doc.text(order.id.toString().slice(0, 10), pageLeft, currentY, {
         width: INFO_VALUE_WIDTH,
         align: 'right'
       })
@@ -183,14 +175,6 @@ export function generateInvoicePdf(
       const top = doc.page.margins.top
       doc.fontSize(9).fillColor('#666666')
 
-      // doc.text(shapeArabicLine(`فاتورة رقم`), pageLeft, top, {
-      //   width: fullWidth / 3,
-      //   align: 'right'
-      // })
-      // doc.text(shapeArabicLine(`${order.invoiceNumber.toString().slice(0, 10)})`), pageLeft, top, {
-      //   width: (2 * fullWidth) / 3,
-      //   align: 'right'
-      // })
       doc.fillColor('black').fontSize(10)
       return top + 18
     }
@@ -252,55 +236,57 @@ export function generateInvoicePdf(
     // This is scoped to *this order* — not the client's overall account
     // balance, which can differ (see the client detail page for that).
 
-    const SUMMARY_BOX_WIDTH = 230
-    const SUMMARY_VALUE_COL_WIDTH = 90
-    const SUMMARY_LABEL_COL_WIDTH = SUMMARY_BOX_WIDTH - SUMMARY_VALUE_COL_WIDTH
-    const SUMMARY_ROW_HEIGHT = 20
-    const SUMMARY_TITLE_HEIGHT = 20
-    const SUMMARY_PADDING = 10
-    const summaryBoxHeight = SUMMARY_TITLE_HEIGHT + SUMMARY_ROW_HEIGHT * 3 + SUMMARY_PADDING
+    if (resumeBalance) {
+      const SUMMARY_BOX_WIDTH = 230
+      const SUMMARY_VALUE_COL_WIDTH = 90
+      const SUMMARY_LABEL_COL_WIDTH = SUMMARY_BOX_WIDTH - SUMMARY_VALUE_COL_WIDTH
+      const SUMMARY_ROW_HEIGHT = 20
+      const SUMMARY_TITLE_HEIGHT = 20
+      const SUMMARY_PADDING = 10
+      const summaryBoxHeight = SUMMARY_TITLE_HEIGHT + SUMMARY_ROW_HEIGHT * 3 + SUMMARY_PADDING
 
-    if (y + summaryBoxHeight > bottomLimit) {
-      y = startPlainContinuationPage()
-    }
+      if (y + summaryBoxHeight > bottomLimit) {
+        y = startPlainContinuationPage()
+      }
 
-    const summaryBoxX = pageLeft
-    const summaryValueX = summaryBoxX
-    const summaryLabelX = summaryBoxX + SUMMARY_VALUE_COL_WIDTH
+      const summaryBoxX = pageLeft
+      const summaryValueX = summaryBoxX
+      const summaryLabelX = summaryBoxX + SUMMARY_VALUE_COL_WIDTH
 
-    doc.rect(summaryBoxX, y, SUMMARY_BOX_WIDTH, summaryBoxHeight).lineWidth(1).stroke()
+      doc.rect(summaryBoxX, y, SUMMARY_BOX_WIDTH, summaryBoxHeight).lineWidth(1).stroke()
 
-    let summaryY = y + SUMMARY_PADDING / 2
-    doc.fontSize(10)
-    doc.text(shapeArabicLine('ملخص الطلب'), summaryBoxX, summaryY, {
-      width: SUMMARY_BOX_WIDTH,
-      align: 'right'
-    })
-    summaryY += SUMMARY_TITLE_HEIGHT
-
-    const remaining = client.debt
-    const summaryRows: Array<[string, string]> = [
-      ['الإجمالي', order.subtotal.toFixed(2)],
-      ['المبلغ المدفوع', depositAmount.toFixed(2)],
-      ['الدين المتبقي', remaining.toFixed(2)]
-    ]
-
-    doc.fontSize(9)
-    for (const [label, value] of summaryRows) {
-      doc.text(shapeArabicLine(label), summaryLabelX, summaryY, {
-        width: SUMMARY_LABEL_COL_WIDTH - 6,
+      let summaryY = y + SUMMARY_PADDING / 2
+      doc.fontSize(10)
+      doc.text(shapeArabicLine('ملخص الطلب'), summaryBoxX, summaryY, {
+        width: SUMMARY_BOX_WIDTH,
         align: 'right'
       })
-      // Pure numeric string — deliberately not passed through
-      // shapeArabicLine, same as the item table's numeric columns.
-      doc.text(value, summaryValueX, summaryY, {
-        width: SUMMARY_VALUE_COL_WIDTH - 6,
-        align: 'right'
-      })
-      summaryY += SUMMARY_ROW_HEIGHT
-    }
+      summaryY += SUMMARY_TITLE_HEIGHT
 
-    y += summaryBoxHeight
+      const summaryRows: Array<[string, string]> = [
+        ['الإجمالي', order.subtotal.toFixed(2)],
+        ['الديون السابقة', resumeBalance.balanceBefore.toFixed(2)],
+        ['المبلغ المدفوع', resumeBalance.amount.toFixed(2)],
+        ['الدين المتبقي', resumeBalance.balanceAfter.toFixed(2)]
+      ]
+
+      doc.fontSize(9)
+      for (const [label, value] of summaryRows) {
+        doc.text(shapeArabicLine(label), summaryLabelX, summaryY, {
+          width: SUMMARY_LABEL_COL_WIDTH - 6,
+          align: 'right'
+        })
+        // Pure numeric string — deliberately not passed through
+        // shapeArabicLine, same as the item table's numeric columns.
+        doc.text(value, summaryValueX, summaryY, {
+          width: SUMMARY_VALUE_COL_WIDTH - 6,
+          align: 'right'
+        })
+        summaryY += SUMMARY_ROW_HEIGHT
+      }
+
+      y += summaryBoxHeight
+    }
 
     // ---- Page numbers (mirrored to bottom-left for RTL) --------------------
 

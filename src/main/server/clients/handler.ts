@@ -38,16 +38,6 @@ export const clientsRouter = os.router({
     })
   }),
 
-  getBalance: os.input(z.object({ id: z.number().int() })).handler(async ({ input, context }) => {
-    const result = await context.services.clients.getBalance(input.id)
-    return result.match({
-      ok: (balance) => balance,
-      err: (e) => {
-        throw context.toORPCError(e)
-      }
-    })
-  }),
-
   create: os.input(CreateClientSchema).handler(async ({ input, context }) => {
     const result = await context.services.clients.create(input)
     return result.match({

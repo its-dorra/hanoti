@@ -2,6 +2,9 @@ import { AppDb, AppTransaction } from '../../db/client'
 import { clientLedgers } from '../../db/schema'
 import { and, desc, eq, lt, lte, or } from 'drizzle-orm'
 import { endOfDay } from '../../lib/utils'
+import { LedgerEntry } from './types'
+
+type PaymentLedgerEntry = Omit<LedgerEntry, 'referenceType'> & { referenceType: 'payment' }
 
 export class LedgersDataAccess {
   constructor(private readonly db: AppDb) {}
@@ -33,6 +36,41 @@ export class LedgersDataAccess {
       )
       .orderBy(desc(clientLedgers.createdAt), desc(clientLedgers.id))
       .limit(queryLimit + 1)
+  }
+
+  async getResumeBalanceByDate(clientId: number, date: Date) {
+    let [ledger] = await this.db
+      .select()
+      .from(clientLedgers)
+      .where(
+        and(
+          eq(clientLedgers.clientId, clientId),
+          eq(clientLedgers.referenceType, 'payment'),
+          lte(clientLedgers.createdAt, endOfDay(date))
+        )
+      )
+      .orderBy(desc(clientLedgers.createdAt), desc(clientLedgers.id))
+      .limit(1)
+
+    if (!ledger) {
+      const lastLedger = await this.db.query.clientLedgers.findFirst({
+        where: (clientLedgers, { eq, and, lte }) =>
+          and(eq(clientLedgers.clientId, clientId), lte(clientLedgers.createdAt, endOfDay(date)))
+      })
+
+      ledger = {
+        amount: 0,
+        balanceBefore: lastLedger!.balanceAfter,
+        balanceAfter: lastLedger!.balanceAfter,
+        clientId,
+        createdAt: date,
+        id: lastLedger!.id,
+        referenceType: 'payment',
+        referenceId: lastLedger!.referenceId
+      }
+    }
+
+    return ledger as PaymentLedgerEntry
   }
 
   async createLedgerEntry(
