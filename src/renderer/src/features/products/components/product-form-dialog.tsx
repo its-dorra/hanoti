@@ -28,16 +28,28 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
   const form = useForm({
     defaultValues: {
       name: product?.name ?? '',
-      buyingPrice: product?.buyingPrice ?? 0,
-      quantity: product?.quantity ?? 0,
-      prices: product?.prices.map((p) => ({ amount: p.amount })) ?? [{ amount: 0 }]
+      buyingPrice: product?.buyingPrice ?? '',
+      quantity: product?.quantity ?? '',
+      prices: product?.prices.map((p) => ({ amount: p.amount })) ?? [{ amount: '' }]
     },
-    onSubmit: async ({ value }) => {
+    onSubmit: async ({ value, formApi }) => {
       if (isEditing && product) {
-        await updateProduct.mutateAsync({ id: product.id, ...value })
+        await updateProduct.mutateAsync({
+          id: product.id,
+          ...value,
+          quantity: +value.quantity,
+          buyingPrice: +value.buyingPrice,
+          prices: value.prices.map((p) => ({ amount: +p.amount }))
+        })
       } else {
-        await createProduct.mutateAsync(value)
+        await createProduct.mutateAsync({
+          ...value,
+          quantity: +value.quantity,
+          buyingPrice: +value.buyingPrice,
+          prices: value.prices.map((p) => ({ amount: +p.amount }))
+        })
       }
+      formApi.reset()
       onOpenChange(false)
     }
   })
@@ -88,7 +100,11 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                     type="number"
                     step="0.01"
                     value={field.state.value}
-                    onChange={(e) => field.handleChange(Number(e.target.value))}
+                    onChange={(e) =>
+                      e.target.value === ''
+                        ? field.handleChange('')
+                        : field.handleChange(Number(e.target.value))
+                    }
                   />
                 </div>
               )}
@@ -103,7 +119,11 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                     type="number"
                     min={0}
                     value={field.state.value}
-                    onChange={(e) => field.handleChange(Math.max(0, Number(e.target.value)))}
+                    onChange={(e) =>
+                      field.handleChange(
+                        e.target.value === '' ? '' : Math.max(0, Number(e.target.value))
+                      )
+                    }
                   />
                 </div>
               )}
@@ -125,7 +145,11 @@ export function ProductFormDialog({ open, onOpenChange, product }: ProductFormDi
                               type="number"
                               step="0.01"
                               value={subField.state.value}
-                              onChange={(e) => subField.handleChange(Number(e.target.value))}
+                              onChange={(e) =>
+                                e.target.value === ''
+                                  ? subField.handleChange('')
+                                  : subField.handleChange(Number(e.target.value))
+                              }
                             />
                           </div>
                         )}

@@ -4,23 +4,36 @@ import { Input } from '../../../components/ui/input'
 import { Button } from '../../../components/ui/button'
 import type { Product } from '../../../../../shared/schemas/product.schema'
 import { orpc } from '@renderer/integrations/orpc'
+import { OrderLineItem } from '@renderer/features/orders/types'
 
 interface ProductSearchSelectProps {
   selectedProduct: Product | undefined
   onSelect: (product: Product) => void
   onClear: () => void
+  items: OrderLineItem[]
 }
 
 export function ProductSearchSelect({
   selectedProduct,
   onSelect,
-  onClear
+  onClear,
+  items
 }: ProductSearchSelectProps) {
   const [query, setQuery] = React.useState('')
 
   const { data: products, isLoading } = useQuery(
     orpc.products.list.queryOptions({ input: { query } })
   )
+
+  const filteredProducts = React.useMemo(() => {
+    if (!products) {
+      return []
+    }
+
+    const selectedProductIds = new Set(items.map((item) => item.product.id))
+
+    return products.filter((product) => !selectedProductIds.has(product.id))
+  }, [products, items])
 
   if (selectedProduct) {
     return (
@@ -50,8 +63,8 @@ export function ProductSearchSelect({
       <div className="mt-1 max-h-60 w-full overflow-auto rounded-md border bg-background shadow-md">
         {isLoading ? (
           <p className="px-3 py-2 text-sm text-muted-foreground">جارٍ البحث...</p>
-        ) : products && products.length > 0 ? (
-          products.map((product) => (
+        ) : filteredProducts && filteredProducts.length > 0 ? (
+          filteredProducts.map((product) => (
             <button
               key={product.id}
               type="button"

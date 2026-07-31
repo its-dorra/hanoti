@@ -19,20 +19,21 @@ import { ProductSearchSelect } from '@renderer/features/products/components/prod
 import { formatDZD } from '#lib/utils'
 
 interface AddOrderItemFormProps {
+  items: OrderLineItem[]
   onAdd: (item: OrderLineItem) => void
 }
 
-export function AddOrderItemForm({ onAdd }: AddOrderItemFormProps) {
+export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
   const [product, setProduct] = React.useState<Product>()
 
-  const [quantity, setQuantity] = React.useState(1)
+  const [quantity, setQuantity] = React.useState<number | ''>('')
   const [priceId, setPriceId] = React.useState<number>()
   const [useCustomPrice, setUseCustomPrice] = React.useState(false)
   const [customPrice, setCustomPrice] = React.useState(0)
 
   const reset = React.useCallback(() => {
     setProduct(undefined)
-    setQuantity(1)
+    setQuantity('')
     setPriceId(undefined)
     setUseCustomPrice(false)
     setCustomPrice(0)
@@ -47,7 +48,7 @@ export function AddOrderItemForm({ onAdd }: AddOrderItemFormProps) {
   const canAdd =
     product !== undefined &&
     Number.isFinite(quantity) &&
-    quantity > 0 &&
+    +quantity > 0 &&
     (useCustomPrice ? Number.isFinite(customPrice) && customPrice >= 0 : priceId !== undefined)
 
   const handleAdd = () => {
@@ -68,7 +69,7 @@ export function AddOrderItemForm({ onAdd }: AddOrderItemFormProps) {
     onAdd({
       key: createOrderLineItemKey(),
       product,
-      quantity,
+      quantity: +quantity,
       priceId: useCustomPrice ? undefined : priceId,
       customUnitPrice: useCustomPrice ? customPrice : undefined,
       unitPrice
@@ -86,6 +87,7 @@ export function AddOrderItemForm({ onAdd }: AddOrderItemFormProps) {
       }}
     >
       <ProductSearchSelect
+        items={items}
         selectedProduct={product}
         onSelect={handleProductSelect}
         onClear={reset}
@@ -100,13 +102,12 @@ export function AddOrderItemForm({ onAdd }: AddOrderItemFormProps) {
               autoFocus
               id="order-item-quantity"
               type="number"
-              min={1}
               step={1}
               value={quantity}
               onChange={(event) => {
-                const value = Number(event.target.value)
+                const value = event.target.value === '' ? '' : Number(event.target.value)
 
-                setQuantity(Number.isFinite(value) ? Math.max(1, value) : 1)
+                setQuantity(Number.isFinite(value) ? Math.max(1, +value) : '')
               }}
             />
           </div>

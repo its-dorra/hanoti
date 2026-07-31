@@ -13,7 +13,7 @@ export class LedgersDataAccess {
     clientId: number,
     type: (typeof clientLedgers.$inferSelect)['referenceType'] | 'all',
     limit?: number | null,
-    cursor?: { createdAt: Date; id: number },
+    cursor?: { createdAt: Date; id: number } | null,
     before?: Date
   ) {
     const queryLimit = limit ?? 20

@@ -13,10 +13,9 @@ import {
 } from '../../lib/errors'
 import type {
   CreateOrderInput,
-  // UpdateOrderInput,
-  // OrderFilterInput,
-  Order
-  // PaginatedOrders
+  Order,
+  OrderFilterInput,
+  PaginatedOrders
 } from '../../../shared/schemas/order.schema'
 import { ClientLedgersService } from '../ledgers/service'
 
@@ -161,11 +160,6 @@ export class OrdersService {
         })
         if (orderLedgerResult.isErr()) throw orderLedgerResult.error
 
-        // The client now owes `subtotal` more — a single incremental
-        // UPDATE, not a recomputation over every order/payment.
-        const debtResult = await this.clientsService.adjustDebt(appTx, input.clientId, subtotal)
-        if (debtResult.isErr()) throw debtResult.error
-
         if (input.depositAmount > 0) {
           const paymentResult = await this.paymentsService.recordPaymentAt(
             appTx,
@@ -173,27 +167,14 @@ export class OrdersService {
             timestamp
           )
           if (paymentResult.isErr()) throw paymentResult.error
-
-          // create a ledger entry for the payment, reflecting the new balance after the deposit
-          const paymentLedgerResult = await this.ledgersService.createLedgerEntry(appTx, {
-            clientId: input.clientId,
-            referenceId: paymentResult.value.id,
-            referenceType: 'payment',
-            amount: input.depositAmount,
-            balanceBefore: clientResult.value.balance + subtotal,
-            balanceAfter: clientResult.value.balance + subtotal - input.depositAmount
-          })
-          if (paymentLedgerResult.isErr()) throw paymentLedgerResult.error
-
-          // The client now owes `depositAmount` less — a single incremental
-          // UPDATE, not a recomputation over every order/payment.
-          const debtAdjustmentResult = await this.clientsService.adjustDebt(
-            appTx,
-            input.clientId,
-            -input.depositAmount
-          )
-          if (debtAdjustmentResult.isErr()) throw debtAdjustmentResult.error
         }
+
+        const debtResult = await this.clientsService.adjustDebt(
+          appTx,
+          input.clientId,
+          subtotal - input.depositAmount
+        )
+        if (debtResult.isErr()) throw debtResult.error
 
         return { ...orderRow, items: itemRows }
       })

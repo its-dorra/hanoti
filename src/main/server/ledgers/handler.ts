@@ -9,11 +9,12 @@ const listAllInputSchema = z.object({
   limit: z.number().int().optional(),
   cursor: z
     .object({
-      createdAt: z.date(),
+      createdAt: z.coerce.date(),
       id: z.number().int()
     })
-    .optional(),
-  before: z.date().optional()
+    .optional()
+    .nullable(),
+  before: z.coerce.date().optional()
 })
 
 export const clientLedgersRoute = os.router({

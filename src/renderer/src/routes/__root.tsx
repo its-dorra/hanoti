@@ -44,13 +44,18 @@ function AppSidebar() {
         <SidebarGroup className="gap-1">
           {NAV_ITEMS.map((item) => (
             <SidebarMenuItem key={item.to}>
-              <SidebarMenuButton asChild>
+              <SidebarMenuButton
+                className="hover:bg-primary hover:text-primary-foreground
+              "
+                asChild
+              >
                 <Link
                   to={item.to}
                   activeProps={{
-                    className: 'bg-primary text-primary-foreground bg-primary'
+                    className: 'bg-primary text-primary-foreground hover:bg-primary'
                   }}
                   className="flex items-center gap-2 rounded-md p-2 py-5 text-sm font-medium"
+                  preload="viewport"
                 >
                   <item.icon className="h-4 w-4" />
                   {item.label}

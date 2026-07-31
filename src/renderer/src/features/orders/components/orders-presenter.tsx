@@ -4,13 +4,13 @@ import { Button } from '#components/ui/button'
 import { Input } from '#components/ui/input'
 import { Skeleton } from '#components/ui/skeleton'
 
-import { Plus, Printer, Search } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { formatDZD } from '@/lib/utils'
 import type { Order } from '../../../../../shared/schemas/order.schema'
-import { printInvoice } from '../utils'
 
 import { Label } from '#components/ui/label'
 import { DatePicker } from '#components/date-picker'
+import PrintOrderDialog from '@renderer/features/ledgers/components/print-order-dialog'
 
 interface OrdersPresenterProps {
   orders: Order[]
@@ -129,9 +129,7 @@ export function OrdersPresenter({
                     <TableCell>{formatDZD(order.subtotal)}</TableCell>
 
                     <TableCell className="text-end">
-                      <Button variant="ghost" size="icon" onClick={() => printInvoice(order.id)}>
-                        <Printer className="h-4 w-4" />
-                      </Button>
+                      <PrintOrderDialog orderId={order.id} createdAt={order.orderDate} />
                     </TableCell>
                   </TableRow>
                 ))}

@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Link } from '@tanstack/react-router'
 
 import { useCreateOrder } from '../hooks/use-create-order'
-import { printInvoice } from '../utils'
 
 import type { OrderLineItem } from '../types'
 import { clearDraft, mapOrderItemsForSubmission, resolveDraftItems } from '../utils'
@@ -23,6 +22,7 @@ import { OrderItemsTable } from './order-item-table'
 import { Client } from 'src/shared/schemas/client.schema'
 import { orpc } from '@renderer/integrations/orpc'
 import { ClientSearchSelect } from '@renderer/features/clients/components/client-search-select'
+import { printInvoice } from '@renderer/features/ledgers/utils'
 
 interface CreateOrderPageProps {
   defaultClientId?: number
@@ -123,7 +123,7 @@ export function CreateOrderPage({ defaultClientId }: CreateOrderPageProps) {
         clientId: String(selectedClient.id)
       }
     }).then(() => {
-      printInvoice(order.id)
+      printInvoice(order.id, order.orderDate)
     })
   }
 
@@ -155,7 +155,7 @@ export function CreateOrderPage({ defaultClientId }: CreateOrderPageProps) {
         </CardHeader>
 
         <CardContent>
-          <AddOrderItemForm onAdd={handleAddItem} />
+          <AddOrderItemForm items={items} onAdd={handleAddItem} />
         </CardContent>
       </Card>
 

@@ -243,7 +243,7 @@ export function generateInvoicePdf(
       const SUMMARY_ROW_HEIGHT = 20
       const SUMMARY_TITLE_HEIGHT = 20
       const SUMMARY_PADDING = 10
-      const summaryBoxHeight = SUMMARY_TITLE_HEIGHT + SUMMARY_ROW_HEIGHT * 3 + SUMMARY_PADDING
+      const summaryBoxHeight = SUMMARY_TITLE_HEIGHT + SUMMARY_ROW_HEIGHT * 4 + SUMMARY_PADDING
 
       if (y + summaryBoxHeight > bottomLimit) {
         y = startPlainContinuationPage()
@@ -258,7 +258,7 @@ export function generateInvoicePdf(
       let summaryY = y + SUMMARY_PADDING / 2
       doc.fontSize(10)
       doc.text(shapeArabicLine('ملخص الطلب'), summaryBoxX, summaryY, {
-        width: SUMMARY_BOX_WIDTH,
+        width: SUMMARY_BOX_WIDTH - 6,
         align: 'right'
       })
       summaryY += SUMMARY_TITLE_HEIGHT

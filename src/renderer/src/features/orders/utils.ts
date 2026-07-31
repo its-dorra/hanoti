@@ -1,15 +1,5 @@
-import { orpc } from '@renderer/integrations/orpc'
-
 import type { Product } from 'src/shared/schemas/product.schema'
 import type { OrderDraft, OrderDraftItem, OrderLineItem } from './types'
-
-export async function printInvoice(orderId: number) {
-  const { base64 } = await orpc.orders.getInvoicePdf.call({ orderId })
-  await window.api.openPdf({
-    base64,
-    filename: `invoice-${orderId}.pdf`
-  })
-}
 
 export const ORDER_DRAFT_STORAGE_KEY = 'grocery-app:order-draft'
 

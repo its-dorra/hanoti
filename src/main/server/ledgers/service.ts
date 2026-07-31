@@ -31,7 +31,7 @@ export class ClientLedgersService {
     clientId: number,
     type: (typeof clientLedgers.$inferSelect)['referenceType'] | 'all',
     limit?: number | null,
-    cursor?: { createdAt: Date; id: number },
+    cursor?: { createdAt: Date; id: number } | null,
     before?: Date
   ) {
     try {
@@ -96,7 +96,7 @@ export class ClientLedgersService {
             const orderResult = await this.ordersService.deleteOrder(tx, lastLedger.referenceId)
             if (orderResult.isErr()) throw orderResult.error
 
-            return Result.ok(true)
+            return Result.ok(lastLedger)
           }
 
           case 'payment': {
@@ -106,7 +106,7 @@ export class ClientLedgersService {
             )
             if (paymentResult.isErr()) throw paymentResult.error
 
-            return Result.ok(true)
+            return Result.ok(lastLedger)
           }
 
           default:

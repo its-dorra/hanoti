@@ -79,13 +79,6 @@ export class PaymentsService {
 
         if (ledgerResult.isErr()) throw ledgerResult.error
 
-        const debtAdjustmentResult = await this.clientsService.adjustDebt(
-          tx,
-          input.clientId,
-          -input.amount
-        )
-        if (debtAdjustmentResult.isErr()) throw debtAdjustmentResult.error
-
         return result.value
       })
       return Result.ok(payment)

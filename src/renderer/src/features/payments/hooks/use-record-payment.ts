@@ -11,6 +11,7 @@ export function useRecordPayment() {
         // client's `debt` balance — invalidate both namespaces.
         queryClient.invalidateQueries({ queryKey: orpc.payments.key() })
         queryClient.invalidateQueries({ queryKey: orpc.clients.key() })
+        queryClient.invalidateQueries({ queryKey: orpc.ledgers.key() })
       }
     })
   )
