@@ -228,14 +228,6 @@ export function generateInvoicePdf(
     doc.moveTo(COL.total.x, y).lineTo(pageRight, y).lineWidth(1).stroke()
     y += 20
 
-    // ---- Order summary box: total / deposited / remaining ------------------
-    // Bottom-left, as requested — a small bordered box with three rows:
-    // the order's total, how much the client deposited when the order was
-    // created (looked up by timestamp, entirely separate from the order
-    // row itself), and what's left to pay on this order specifically.
-    // This is scoped to *this order* — not the client's overall account
-    // balance, which can differ (see the client detail page for that).
-
     if (resumeBalance) {
       const SUMMARY_BOX_WIDTH = 230
       const SUMMARY_VALUE_COL_WIDTH = 90
@@ -286,9 +278,51 @@ export function generateInvoicePdf(
       }
 
       y += summaryBoxHeight
-    }
+    } else {
+      const SUMMARY_BOX_WIDTH = 230
+      const SUMMARY_VALUE_COL_WIDTH = 90
+      const SUMMARY_LABEL_COL_WIDTH = SUMMARY_BOX_WIDTH - SUMMARY_VALUE_COL_WIDTH
+      const SUMMARY_ROW_HEIGHT = 20
+      const SUMMARY_TITLE_HEIGHT = 20
+      const SUMMARY_PADDING = 10
+      const summaryBoxHeight = SUMMARY_TITLE_HEIGHT + SUMMARY_ROW_HEIGHT + SUMMARY_PADDING
 
-    // ---- Page numbers (mirrored to bottom-left for RTL) --------------------
+      if (y + summaryBoxHeight > bottomLimit) {
+        y = startPlainContinuationPage()
+      }
+
+      const summaryBoxX = pageLeft
+      const summaryValueX = summaryBoxX
+      const summaryLabelX = summaryBoxX + SUMMARY_VALUE_COL_WIDTH
+
+      doc.rect(summaryBoxX, y, SUMMARY_BOX_WIDTH, summaryBoxHeight).lineWidth(1).stroke()
+
+      let summaryY = y + SUMMARY_PADDING / 2
+      doc.fontSize(10)
+      doc.text(shapeArabicLine('ملخص الطلب'), summaryBoxX, summaryY, {
+        width: SUMMARY_BOX_WIDTH - 6,
+        align: 'right'
+      })
+      summaryY += SUMMARY_TITLE_HEIGHT
+
+      const summaryRows: Array<[string, string]> = [['الإجمالي', order.subtotal.toFixed(2)]]
+
+      doc.fontSize(9)
+      for (const [label, value] of summaryRows) {
+        doc.text(shapeArabicLine(label), summaryLabelX, summaryY, {
+          width: SUMMARY_LABEL_COL_WIDTH - 6,
+          align: 'right'
+        })
+
+        doc.text(value, summaryValueX, summaryY, {
+          width: SUMMARY_VALUE_COL_WIDTH - 6,
+          align: 'right'
+        })
+        summaryY += SUMMARY_ROW_HEIGHT
+      }
+
+      y += summaryBoxHeight
+    }
 
     const pageRange = doc.bufferedPageRange()
     for (let i = pageRange.start; i < pageRange.start + pageRange.count; i++) {

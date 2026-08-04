@@ -2,8 +2,8 @@ import { Input } from '#components/ui/input'
 import { Label } from '#components/ui/label'
 
 interface OrderDepositProps {
-  value: number
-  onChange: (value: number) => void
+  value: number | ''
+  onChange: (value: number | '') => void
 }
 
 export function OrderDeposit({ value, onChange }: OrderDepositProps) {
@@ -18,9 +18,9 @@ export function OrderDeposit({ value, onChange }: OrderDepositProps) {
         step="0.01"
         value={value}
         onChange={(event) => {
-          const nextValue = Number(event.target.value)
+          const newValue = event.target.value === '' ? '' : Number(event.target.value)
 
-          onChange(Number.isFinite(nextValue) ? Math.max(0, nextValue) : 0)
+          onChange(newValue)
         }}
       />
 

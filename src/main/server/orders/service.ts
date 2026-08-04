@@ -126,16 +126,13 @@ export class OrdersService {
 
     const subtotal = resolvedItems.reduce((sum, i) => sum + i.lineTotal, 0)
 
-    const timestamp = new Date()
-
     try {
       const order = await this.db.transaction(async (tx) => {
         const appTx = tx
 
         const orderRow = await this.dataAccess.insertOrder(appTx, {
           clientId: input.clientId,
-          subtotal,
-          timestamp
+          subtotal
         })
 
         const itemRows = await this.dataAccess.insertOrderItems(appTx, orderRow.id, resolvedItems)
@@ -161,12 +158,22 @@ export class OrdersService {
         if (orderLedgerResult.isErr()) throw orderLedgerResult.error
 
         if (input.depositAmount > 0) {
-          const paymentResult = await this.paymentsService.recordPaymentAt(
-            appTx,
-            { clientId: input.clientId, amount: input.depositAmount, note: null },
-            timestamp
-          )
+          const paymentResult = await this.paymentsService.recordPaymentTx(appTx, {
+            clientId: input.clientId,
+            amount: input.depositAmount,
+            note: null
+          })
           if (paymentResult.isErr()) throw paymentResult.error
+
+          const paymentLedgerResult = await this.ledgersService.createLedgerEntry(appTx, {
+            clientId: input.clientId,
+            referenceId: paymentResult.value.id,
+            referenceType: 'payment',
+            amount: input.depositAmount,
+            balanceBefore: clientResult.value.balance + subtotal,
+            balanceAfter: clientResult.value.balance + subtotal - input.depositAmount
+          })
+          if (paymentLedgerResult.isErr()) throw paymentLedgerResult.error
         }
 
         const debtResult = await this.clientsService.adjustDebt(
@@ -187,71 +194,6 @@ export class OrdersService {
       return Result.err(new DatabaseError({ message: 'Failed to create order', cause: thrown }))
     }
   }
-
-  // async updateOrder(input: UpdateOrderInput): Promise<Result<Order, AppError>> {
-  //   const existingResult = await this.getById(input.id)
-  //   if (existingResult.isErr()) return Result.err(existingResult.error)
-  //   const existing = existingResult.value
-
-  //   if (!input.items) return Result.ok(existing)
-
-  //   const resolvedResult = await this.resolveItems(input.items)
-  //   if (resolvedResult.isErr()) return Result.err(resolvedResult.error)
-  //   const resolvedItems = resolvedResult.value
-  //   const newSubtotal = resolvedItems.reduce((sum, i) => sum + i.lineTotal, 0)
-  //   const subtotalDelta = newSubtotal - existing.subtotal
-
-  //   try {
-  //     const order = await this.db.transaction(async (tx) => {
-  //       const appTx = tx
-
-  //       // Give back stock consumed by the old items...
-  //       for (const oldItem of existing.items) {
-  //         const restoreResult = await this.productsService.reserveStockForOrder(
-  //           appTx,
-  //           oldItem.productId,
-  //           -oldItem.quantity // negative delta = restore
-  //         )
-  //         if (restoreResult.isErr()) throw restoreResult.error
-  //       }
-
-  //       // ...then reserve stock for the new items.
-  //       for (const newItem of resolvedItems) {
-  //         const reserveResult = await this.productsService.reserveStockForOrder(
-  //           appTx,
-  //           newItem.productId,
-  //           newItem.quantity
-  //         )
-  //         if (reserveResult.isErr()) throw reserveResult.error
-  //       }
-
-  //       const updated = await this.dataAccess.replaceItems(
-  //         appTx,
-  //         input.id,
-  //         resolvedItems,
-  //         newSubtotal
-  //       )
-
-  //       if (subtotalDelta !== 0) {
-  //         const debtResult = await this.clientsService.adjustDebt(
-  //           appTx,
-  //           existing.clientId,
-  //           subtotalDelta
-  //         )
-  //         if (debtResult.isErr()) throw debtResult.error
-  //       }
-
-  //       return updated
-  //     })
-
-  //     return this.getById(order.id)
-  //   } catch (thrown) {
-  //     if (thrown && typeof thrown === 'object' && 'tag' in thrown) {
-  //       return Result.err(thrown as unknown as AppError)
-  //     }
-  //     return Result.err(new DatabaseError({ message: 'Failed to update order', cause: thrown }))
-  //   }
-  // }
 
   async deleteOrder(tx: AppTransaction, id: number): Promise<Result<true, AppError>> {
     const existingResult = await this.getById(id)

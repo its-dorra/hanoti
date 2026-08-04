@@ -17,6 +17,18 @@ import {
   SelectTrigger,
   SelectValue
 } from '#components/ui/select'
+import useDeleteLastEntry from '@renderer/features/ledgers/hooks/use-delete-last-entry'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from '#components/ui/dialog'
+import { useState } from 'react'
+import PrintResumeDialog from '@renderer/features/ledgers/components/print-resume-dialog'
 
 function ClientDetailPage() {
   const { clientId } = useParams({ from: '/clients/$clientId/' })
@@ -32,7 +44,7 @@ function ClientDetailPage() {
   const client = clientQuery.data
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-y-6">
       <Link
         to="/clients"
         className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -67,8 +79,48 @@ function ClientDetailPage() {
         </div>
       </div>
       <Filters />
+      <div className="flex items-center gap-2 self-end">
+        <PrintResumeDialog clientId={id} />
+        <DeleteLastEntryButton clientId={id} />
+      </div>
       <LedgersContainer clientId={id} />
     </div>
+  )
+}
+
+function DeleteLastEntryButton({ clientId }: { clientId: number }) {
+  const [open, setOpen] = useState(false)
+
+  const deleteLastEntryMutation = useDeleteLastEntry()
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="destructive">حذف آخر إدخال</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>حذف آخر إدخال</DialogTitle>
+        </DialogHeader>
+        <p className="mb-4 text-sm text-muted-foreground">
+          هل أنت متأكد أنك تريد حذف آخر إدخال؟ لا يمكن التراجع عن هذا الإجراء.
+        </p>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button>إلغاء</Button>
+          </DialogClose>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              deleteLastEntryMutation.mutateAsync({ clientId }).then(() => setOpen(false))
+            }}
+            disabled={deleteLastEntryMutation.isPending}
+          >
+            حذف
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

@@ -23,25 +23,12 @@ export class PaymentsService {
     private readonly ledgersService: ClientLedgersService
   ) {}
 
-  // async listForClient(clientId: number): Promise<Result<Payment[], AppError>> {
-  //   try {
-  //     const rows = await this.dataAccess.findByClient(clientId)
-  //     return Result.ok(rows)
-  //   } catch (cause) {
-  //     return Result.err(new DatabaseError({ message: 'Failed to list payments', cause }))
-  //   }
-  // }
-
-  async recordPaymentAt(
+  async recordPaymentTx(
     tx: AppTransaction,
-    input: RecordPaymentInput,
-    timestamp: Date
+    input: RecordPaymentInput
   ): Promise<Result<Payment, AppError>> {
     try {
-      const row = await this.dataAccess.create(tx, input, timestamp)
-
-      const debtResult = await this.clientsService.adjustDebt(tx, input.clientId, -input.amount)
-      if (debtResult.isErr()) throw debtResult.error
+      const row = await this.dataAccess.create(tx, input)
 
       return Result.ok(row)
     } catch (thrown) {
@@ -52,19 +39,13 @@ export class PaymentsService {
     }
   }
 
-  /**
-   * Public entry point for a standalone payment (e.g. the client walks in
-   * and pays down their tab, unrelated to any specific order). Validates
-   * the client exists, then opens its own transaction around
-   * `recordPaymentAt` with the current time.
-   */
   async recordPayment(input: RecordPaymentInput): Promise<Result<Payment, AppError>> {
     const clientResult = await this.clientsService.getById(input.clientId)
     if (clientResult.isErr()) return Result.err(clientResult.error)
 
     try {
       const payment = await this.db.transaction(async (tx) => {
-        const result = await this.recordPaymentAt(tx, input, new Date())
+        const result = await this.recordPaymentTx(tx, input)
         if (result.isErr()) throw result.error
 
         // create a ledger entry for the payment, reflecting the new balance after the deposit
@@ -78,6 +59,9 @@ export class PaymentsService {
         })
 
         if (ledgerResult.isErr()) throw ledgerResult.error
+
+        const debtResult = await this.clientsService.adjustDebt(tx, input.clientId, -input.amount)
+        if (debtResult.isErr()) throw debtResult.error
 
         return result.value
       })
@@ -96,12 +80,6 @@ export class PaymentsService {
 
     try {
       await this.dataAccess.delete(tx, paymentId)
-      const debtResult = await this.clientsService.adjustDebt(
-        tx,
-        existingPayment.clientId,
-        existingPayment.amount
-      )
-      if (debtResult.isErr()) throw debtResult.error
 
       return Result.ok(existingPayment)
     } catch (thrown) {

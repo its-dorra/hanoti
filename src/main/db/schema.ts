@@ -1,10 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { sqliteTable, text, integer, real, index } from 'drizzle-orm/sqlite-core'
 
-// ---------------------------------------------------------------------------
-// MODULE 1 — Grocery Store Management
-// ---------------------------------------------------------------------------
-
 export const clients = sqliteTable(
   'clients',
   {
@@ -40,8 +36,6 @@ export const products = sqliteTable(
   (t) => [index('products_created_at_id_idx').on(t.createdAt, t.id)]
 )
 
-// Predefined selling price tiers for a product (e.g. multiple prices to
-// choose from at order time — no name/label, just amounts).
 export const productPrices = sqliteTable(
   'product_prices',
   {
@@ -130,10 +124,6 @@ export const clientLedgers = sqliteTable('client_ledgers', {
     .notNull()
     .default(sql`(unixepoch())`)
 })
-
-// ---------------------------------------------------------------------------
-// MODULE 2 — Simple Debt Notebook (fully isolated, no FK to clients above)
-// ---------------------------------------------------------------------------
 
 export const debtEntries = sqliteTable(
   'debt_entries',

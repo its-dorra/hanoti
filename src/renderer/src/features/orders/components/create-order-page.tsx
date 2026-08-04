@@ -19,7 +19,7 @@ import { useInitialOrderDraft, useOrderDraftPersistence } from '../hooks/use-ord
 import { AddOrderItemForm } from './add-order-item-form'
 import { OrderDeposit } from './order-deposit'
 import { OrderItemsTable } from './order-item-table'
-import { Client } from 'src/shared/schemas/client.schema'
+import { Client } from '../../../../../shared/schemas/client.schema'
 import { orpc } from '@renderer/integrations/orpc'
 import { ClientSearchSelect } from '@renderer/features/clients/components/client-search-select'
 import { printInvoice } from '@renderer/features/ledgers/utils'
@@ -40,7 +40,10 @@ export function CreateOrderPage({ defaultClientId }: CreateOrderPageProps) {
 
   const [items, setItems] = React.useState<OrderLineItem[]>([])
 
-  const [depositAmount, setDepositAmount] = React.useState(initialDraft?.depositAmount ?? 0)
+  const initialDepositAmount =
+    initialDraft?.depositAmount === 0 ? '' : (initialDraft?.depositAmount ?? '')
+
+  const [depositAmount, setDepositAmount] = React.useState<number | ''>(initialDepositAmount)
 
   const selectedClientId = initialDraft?.clientId ?? defaultClientId
 
@@ -80,7 +83,7 @@ export function CreateOrderPage({ defaultClientId }: CreateOrderPageProps) {
   useOrderDraftPersistence({
     clientId: selectedClient?.id,
     items,
-    depositAmount
+    depositAmount: Number.isFinite(depositAmount) ? Math.max(0, +depositAmount) : 0
   })
 
   const subtotal = React.useMemo(
@@ -106,7 +109,7 @@ export function CreateOrderPage({ defaultClientId }: CreateOrderPageProps) {
     const order = await createOrder.mutateAsync({
       clientId: selectedClient.id,
       items: mapOrderItemsForSubmission(items),
-      depositAmount
+      depositAmount: Number.isFinite(depositAmount) ? Math.max(0, +depositAmount) : 0
     })
 
     // Clear before navigation so the draft cannot be restored

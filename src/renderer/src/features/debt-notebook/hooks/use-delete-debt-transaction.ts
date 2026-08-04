@@ -16,6 +16,10 @@ export function useDeleteDebtTransaction() {
             input: { debtEntryId: data.debtEntryId }
           })
         })
+
+        queryClient.invalidateQueries({
+          queryKey: orpc.debtNotebook.list.key()
+        })
       }
     })
   )

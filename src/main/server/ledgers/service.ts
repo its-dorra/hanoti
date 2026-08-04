@@ -71,10 +71,10 @@ export class ClientLedgersService {
     }
   }
 
-  async deleteLastLedgerEntry() {
+  async deleteLastLedgerEntry(clientId: number) {
     try {
       return this.db.transaction(async (tx) => {
-        const lastLedger = await this.dataAccess.deleteLastLedgerEntry(tx)
+        const lastLedger = await this.dataAccess.deleteLastLedgerEntry(tx, clientId)
 
         if (!lastLedger) {
           throw new DatabaseError({ message: 'No ledger entry found to delete' })

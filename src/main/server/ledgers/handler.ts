@@ -2,6 +2,7 @@ import z from 'zod'
 import { os } from '../orpc'
 import { generateInvoicePdf } from '../orders/invoices/generate-invoice'
 import { Result } from 'better-result'
+import { generateClientResumeStatementPdf } from '../orders/invoices/generate-resume'
 
 const listAllInputSchema = z.object({
   clientId: z.number().int(),
@@ -35,16 +36,18 @@ export const clientLedgersRoute = os.router({
       }
     })
   }),
-  deleteLastLedger: os.handler(async ({ context }) => {
-    const result = await context.services.clientLedgers.deleteLastLedgerEntry()
+  deleteLastLedger: os
+    .input(z.object({ clientId: z.number().int() }))
+    .handler(async ({ input, context }) => {
+      const result = await context.services.clientLedgers.deleteLastLedgerEntry(input.clientId)
 
-    return Result.match(result, {
-      ok: (v) => v,
-      err: (e) => {
-        throw context.toORPCError(e)
-      }
-    })
-  }),
+      return Result.match(result, {
+        ok: (v) => v,
+        err: (e) => {
+          throw context.toORPCError(e)
+        }
+      })
+    }),
   getInvoicePdf: os
     .input(z.object({ orderId: z.number().int(), resumeDate: z.date().optional() }))
     .handler(async ({ input, context }) => {
@@ -87,6 +90,39 @@ export const clientLedgersRoute = os.router({
       )
       return {
         filename: `invoice-${order.id}.pdf`,
+        base64: pdfBuffer.toString('base64')
+      }
+    }),
+  getResumePdf: os
+    .input(z.object({ clientId: z.number().int(), resumeDate: z.coerce.date() }))
+    .handler(async ({ input, context }) => {
+      const clientResult = await context.services.clients.getById(input.clientId)
+      const client = clientResult.match({
+        ok: (v) => v,
+        err: (e) => {
+          throw context.toORPCError(e)
+        }
+      })
+
+      const depositResult = await context.services.clientLedgers.getResumeBalanceByDate(
+        input.clientId,
+        input.resumeDate
+      )
+
+      const depositAmount = Result.match(depositResult, {
+        ok: (v) => v,
+        err: (e) => {
+          throw context.toORPCError(e)
+        }
+      })
+
+      const pdfBuffer = await generateClientResumeStatementPdf(
+        client,
+        depositAmount,
+        context.arabicFontPath
+      )
+      return {
+        filename: `resume-${client.id}-${input.resumeDate.toISOString().split('T')[0]}.pdf`,
         base64: pdfBuffer.toString('base64')
       }
     })

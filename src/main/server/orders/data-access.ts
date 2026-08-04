@@ -90,17 +90,13 @@ export class OrdersDataAccess {
     data: {
       clientId: number
       subtotal: number
-      timestamp: Date
     }
   ) {
     const [row] = await tx
       .insert(orders)
       .values({
         clientId: data.clientId,
-        subtotal: data.subtotal,
-        orderDate: data.timestamp,
-        createdAt: data.timestamp,
-        updatedAt: data.timestamp
+        subtotal: data.subtotal
       })
       .returning(ORDER_COLUMNS)
     return row

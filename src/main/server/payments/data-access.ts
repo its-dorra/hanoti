@@ -61,15 +61,13 @@ export class PaymentsDataAccess {
    * one step of a larger atomic transaction (PaymentsService.recordPayment,
    * or OrdersService.createOrder when a deposit accompanies the order).
    */
-  async create(tx: AppTransaction, input: RecordPaymentInput, timestamp: Date) {
+  async create(tx: AppTransaction, input: RecordPaymentInput) {
     const [row] = await tx
       .insert(payments)
       .values({
         clientId: input.clientId,
         amount: input.amount,
-        note: input.note ?? null,
-        paymentDate: timestamp,
-        createdAt: timestamp
+        note: input.note ?? null
       })
       .returning(PAYMENT_COLUMNS)
     return row

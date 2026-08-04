@@ -39,34 +39,55 @@ export class LedgersDataAccess {
   }
 
   async getResumeBalanceByDate(clientId: number, date: Date) {
-    let [ledger] = await this.db
-      .select()
-      .from(clientLedgers)
-      .where(
+    let ledger = await this.db.query.clientLedgers.findFirst({
+      where: (clientLedgers, { eq, lte, and }) =>
         and(
           eq(clientLedgers.clientId, clientId),
-          eq(clientLedgers.referenceType, 'payment'),
-          lte(clientLedgers.createdAt, endOfDay(date))
-        )
-      )
-      .orderBy(desc(clientLedgers.createdAt), desc(clientLedgers.id))
-      .limit(1)
+          lte(clientLedgers.createdAt, endOfDay(date)),
+          eq(clientLedgers.referenceType, 'payment')
+        ),
+      orderBy: (clientLedgers, { desc }) => [desc(clientLedgers.createdAt), desc(clientLedgers.id)]
+    })
 
     if (!ledger) {
       const lastLedger = await this.db.query.clientLedgers.findFirst({
         where: (clientLedgers, { eq, and, lte }) =>
-          and(eq(clientLedgers.clientId, clientId), lte(clientLedgers.createdAt, endOfDay(date)))
+          and(eq(clientLedgers.clientId, clientId), lte(clientLedgers.createdAt, endOfDay(date))),
+        orderBy: (clientLedgers, { desc }) => [
+          desc(clientLedgers.createdAt),
+          desc(clientLedgers.id)
+        ]
       })
 
-      ledger = {
-        amount: 0,
-        balanceBefore: lastLedger!.balanceAfter,
-        balanceAfter: lastLedger!.balanceAfter,
-        clientId,
-        createdAt: date,
-        id: lastLedger!.id,
-        referenceType: 'payment',
-        referenceId: lastLedger!.referenceId
+      if (!lastLedger) {
+        const client = await this.db.query.clients.findFirst({
+          where: (clients, { eq }) => eq(clients.id, clientId)
+        })
+
+        if (!client) {
+          throw new Error(`Client with ID ${clientId} not found`)
+        }
+        ledger = {
+          amount: 0,
+          balanceBefore: client.balance,
+          balanceAfter: client.balance,
+          clientId,
+          createdAt: date,
+          id: 0,
+          referenceType: 'payment',
+          referenceId: 0
+        }
+      } else {
+        ledger = {
+          amount: 0,
+          balanceBefore: lastLedger.balanceAfter,
+          balanceAfter: lastLedger.balanceAfter,
+          clientId,
+          createdAt: date,
+          id: lastLedger.id,
+          referenceType: 'payment',
+          referenceId: lastLedger.referenceId
+        }
       }
     }
 
@@ -87,20 +108,19 @@ export class LedgersDataAccess {
     return tx.insert(clientLedgers).values(data)
   }
 
-  async getLastLedger() {
-    const [lastLedger] = await this.db
-      .select()
-      .from(clientLedgers)
-      .orderBy(desc(clientLedgers.createdAt))
-      .limit(1)
+  async getLastLedger(clientId: number) {
+    const lastLedger = await this.db.query.clientLedgers.findFirst({
+      where: (clientLedgers, { eq }) => eq(clientLedgers.clientId, clientId),
+      orderBy: (clientLedgers, { desc }) => [desc(clientLedgers.createdAt), desc(clientLedgers.id)]
+    })
 
     if (!lastLedger) return null
 
     return lastLedger
   }
 
-  async deleteLastLedgerEntry(tx: AppTransaction) {
-    const lastLedger = await this.getLastLedger()
+  async deleteLastLedgerEntry(tx: AppTransaction, clientId: number) {
+    const lastLedger = await this.getLastLedger(clientId)
 
     if (!lastLedger) return null
 

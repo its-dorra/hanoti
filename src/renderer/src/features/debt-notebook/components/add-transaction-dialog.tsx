@@ -29,11 +29,12 @@ export default function AddTransactionDialog({ debtEntryId }: AddTransactionDial
   const [open, setOpen] = useState(false)
 
   const form = useForm({
-    defaultValues: { type: 'deposit' as 'deposit' | 'charge', amount: 0, note: '' },
+    defaultValues: { type: 'deposit' as 'deposit' | 'charge', amount: '' as '' | number, note: '' },
     onSubmit: async ({ value }) => {
       await addTransaction.mutateAsync({
         debtEntryId,
         ...value,
+        amount: Number(value.amount),
         note: value.note || null
       })
       form.reset()
@@ -89,7 +90,9 @@ export default function AddTransactionDialog({ debtEntryId }: AddTransactionDial
                   type="number"
                   step="0.01"
                   value={field.state.value}
-                  onChange={(e) => field.handleChange(Number(e.target.value))}
+                  onChange={(e) =>
+                    field.handleChange(e.target.value === '' ? '' : Number(e.target.value))
+                  }
                 />
               </div>
             )}

@@ -53,7 +53,9 @@ export class ClientsDataAccess {
       .values({
         name: input.name,
         phone: input.phone ?? null,
-        notes: input.notes ?? null
+        notes: input.notes ?? null,
+
+        balance: input.balance ?? 0
       })
       .returning(CLIENT_COLUMNS)
 

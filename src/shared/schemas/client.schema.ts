@@ -14,7 +14,8 @@ export type Client = z.infer<typeof ClientSchema>
 export const CreateClientSchema = z.object({
   name: z.string().trim().min(1, 'Name is required'),
   phone: z.string().trim().min(1).nullable().optional(),
-  notes: z.string().trim().min(1).nullable().optional()
+  notes: z.string().trim().min(1).nullable().optional(),
+  balance: z.number().optional().default(0)
 })
 export type CreateClientInput = z.infer<typeof CreateClientSchema>
 

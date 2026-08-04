@@ -29,21 +29,31 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
     defaultValues: {
       name: client?.name ?? '',
       phone: client?.phone ?? '',
-      notes: client?.notes ?? ''
+      notes: client?.notes ?? '',
+      balance: client?.balance ?? ''
     },
-    onSubmit: async ({ value }) => {
+    onSubmit: async ({ value, formApi }) => {
       const payload = {
         name: value.name,
         phone: value.phone || null,
-        notes: value.notes || null
+        notes: value.notes || null,
+        balance: value.balance || 0
       }
 
       if (isEditing && client) {
-        await updateClient.mutateAsync({ id: client.id, ...payload })
+        await updateClient.mutateAsync({
+          id: client.id,
+          ...payload,
+          balance: payload.balance === '' ? 0 : +payload.balance
+        })
       } else {
-        await createClient.mutateAsync(payload)
+        await createClient.mutateAsync({
+          ...payload,
+          balance: value.balance === '' ? 0 : +value.balance
+        })
       }
       onOpenChange(false)
+      formApi.reset()
     }
   })
 
@@ -107,6 +117,20 @@ export function ClientFormDialog({ open, onOpenChange, client }: ClientFormDialo
                   id="notes"
                   value={field.state.value}
                   onChange={(e) => field.handleChange(e.target.value)}
+                />
+              </div>
+            )}
+          </form.Field>
+
+          <form.Field name="balance">
+            {(field) => (
+              <div className="space-y-1.5">
+                <Label htmlFor="balance">الدين السابق</Label>
+                <Input
+                  id="balance"
+                  type="number"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value === '' ? '' : +e.target.value)}
                 />
               </div>
             )}
