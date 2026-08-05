@@ -4,51 +4,13 @@ import type { Client } from '../../../../shared/schemas/client.schema'
 import { shapeArabicLine, wrapAndShapeArabic } from './arabic-text'
 import { LedgerEntry } from '../../ledgers/types'
 
-/**
- * Renders a printable invoice PDF and returns it as a Buffer.
- *
- * --- Arabic / RTL ---
- * pdfkit has no native Arabic or RTL support (see arabic-text.ts for the
- * shaping/bidi pipeline this relies on). The layout itself is mirrored
- * for RTL reading too: the item table reads right to left (Product
- * column anchored at the right margin, Line Total at the left margin),
- * and page numbers sit at the bottom-left.
- *
- * --- Payment is not part of the order ---
- * The order row itself carries no payment fields at all. `depositAmount`
- * is passed in separately, already looked up by the caller
- * (OrdersService/PaymentsService, correlated by matching timestamps, not
- * a stored relation — see PaymentsDataAccess.findByClientAtTimestamp).
- * This function only ever *displays* that number; it never writes
- * anything.
- *
- * --- Pagination ---
- * Every row's height is measured before drawing (via wrapAndShapeArabic's
- * line count — Arabic word-wrapping has to happen before shaping, see
- * arabic-text.ts), the table header re-draws on continuation pages, and
- * the order-summary box is kept as one indivisible block.
- *
- * IMPORTANT: pdfkit has its OWN internal auto-pagination on top of this
- * manual one — when a doc.text() call would draw past
- * `page.height - margins.bottom`, pdfkit silently inserts a page of its
- * own, independent of the `bottomLimit` checks below. That produces
- * blank/duplicate pages on long orders once our own rowHeight estimate
- * and pdfkit's internal check disagree. We neutralize pdfkit's own
- * check via `disableAutoPageBreak()` and treat `bottomLimit` as the
- * single source of truth for when to break. This must be re-applied
- * after every `doc.addPage()`, since addPage() resets margins from the
- * original constructor options.
- */
+const PAGE_MARGIN = 20
+const FOOTER_RESERVE = 15
+const COLUMN_GAP = 6
 
-// ---- Layout constants -----------------------------------------------------
-
-const PAGE_MARGIN = 50
-const FOOTER_RESERVE = 20
-const COLUMN_GAP = 10
-
-const ROW_PADDING_Y = 6
-const ROW_MIN_HEIGHT = 18
-const HEADER_ROW_HEIGHT = 22
+const ROW_PADDING_Y = 5
+const ROW_MIN_HEIGHT = 20
+const HEADER_ROW_HEIGHT = 24
 
 const ARABIC_FONT = 'Arabic'
 
@@ -64,7 +26,7 @@ export function generateInvoicePdf(
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
-      size: 'A4',
+      size: 'A5',
       margins: { top: PAGE_MARGIN, bottom: PAGE_MARGIN, left: PAGE_MARGIN, right: PAGE_MARGIN },
       bufferPages: true
     })
@@ -91,10 +53,10 @@ export function generateInvoicePdf(
     // Mirrored column layout, right to left: Product is the rightmost
     // (first-read) column; Line Total is the leftmost (last-read) one.
     const COL = {
-      product: { x: 0, width: 235 },
-      qty: { x: 0, width: 50 },
-      unit: { x: 0, width: 90 },
-      total: { x: 0, width: 90 }
+      product: { x: 0, width: 165 },
+      qty: { x: 0, width: 40 },
+      unit: { x: 0, width: 68 },
+      total: { x: 0, width: 88 }
     }
     COL.product.x = pageRight - COL.product.width
     COL.qty.x = COL.product.x - COLUMN_GAP - COL.qty.width
@@ -143,9 +105,9 @@ export function generateInvoicePdf(
     }
 
     function drawInvoiceInfo(y: number): number {
-      const INFO_LABEL_WIDTH = 120
+      const INFO_LABEL_WIDTH = 90
       const INFO_VALUE_WIDTH = fullWidth - INFO_LABEL_WIDTH
-      const INFO_ROW_HEIGHT = 24
+      const INFO_ROW_HEIGHT = 20
       let currentY = y
       doc.fontSize(20)
       doc.text(shapeArabicLine('رقم الفاتورة'), pageLeft + INFO_VALUE_WIDTH, currentY, {
@@ -156,7 +118,7 @@ export function generateInvoicePdf(
         width: INFO_VALUE_WIDTH,
         align: 'right'
       })
-      currentY += INFO_ROW_HEIGHT
+      currentY += INFO_ROW_HEIGHT + 10
       const orderDate = new Date(order.orderDate)
       const formattedDate = `${orderDate.getFullYear()}/${String(orderDate.getMonth() + 1).padStart(2, '0')}/${String(orderDate.getDate()).padStart(2, '0')}`
       doc.fontSize(10)
@@ -229,9 +191,9 @@ export function generateInvoicePdf(
     y += 20
 
     if (resumeBalance) {
-      const SUMMARY_BOX_WIDTH = 230
-      const SUMMARY_VALUE_COL_WIDTH = 90
-      const SUMMARY_LABEL_COL_WIDTH = SUMMARY_BOX_WIDTH - SUMMARY_VALUE_COL_WIDTH
+      const SUMMARY_BOX_WIDTH = 170
+      const SUMMARY_VALUE_COL_WIDTH = 70
+      const SUMMARY_LABEL_COL_WIDTH = 100
       const SUMMARY_ROW_HEIGHT = 20
       const SUMMARY_TITLE_HEIGHT = 20
       const SUMMARY_PADDING = 10
@@ -279,9 +241,9 @@ export function generateInvoicePdf(
 
       y += summaryBoxHeight
     } else {
-      const SUMMARY_BOX_WIDTH = 230
-      const SUMMARY_VALUE_COL_WIDTH = 90
-      const SUMMARY_LABEL_COL_WIDTH = SUMMARY_BOX_WIDTH - SUMMARY_VALUE_COL_WIDTH
+      const SUMMARY_BOX_WIDTH = 170
+      const SUMMARY_VALUE_COL_WIDTH = 70
+      const SUMMARY_LABEL_COL_WIDTH = 100
       const SUMMARY_ROW_HEIGHT = 20
       const SUMMARY_TITLE_HEIGHT = 20
       const SUMMARY_PADDING = 10

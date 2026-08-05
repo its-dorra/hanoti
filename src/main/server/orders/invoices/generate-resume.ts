@@ -3,21 +3,9 @@ import type { Client } from '../../../../shared/schemas/client.schema'
 import { shapeArabicLine } from './arabic-text'
 import { LedgerEntry } from '../../ledgers/types'
 
-/**
- * Renders a standalone client account statement (single ledger entry
- * "resume") as a PDF Buffer — no order/item table.
- *
- * Layout: title, then a compact date line, then a side-by-side row
- * (summary box on the left, client info on the right — RTL reading
- * order, client info read first). All vertical spacing is driven by
- * explicit y increments rather than doc.moveDown(), since moveDown()
- * scales with the *current* font size and produced uneven gaps when
- * jumping between the 18pt title and 10pt body text.
- */
-
-const PAGE_MARGIN = 50
-const FOOTER_RESERVE = 20
-const COLUMN_GAP = 20
+const PAGE_MARGIN = 20
+const FOOTER_RESERVE = 15
+const COLUMN_GAP = 12
 
 const ARABIC_FONT = 'Arabic'
 
@@ -37,7 +25,7 @@ export function generateClientResumeStatementPdf(
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
-      size: 'A4',
+      size: 'A5',
       margins: { top: PAGE_MARGIN, bottom: PAGE_MARGIN, left: PAGE_MARGIN, right: PAGE_MARGIN },
       bufferPages: true
     })
@@ -66,38 +54,42 @@ export function generateClientResumeStatementPdf(
     // ---- Title + date (explicit, tight spacing) ---------------------------
 
     let y = doc.page.margins.top
-    doc.fontSize(18)
-    doc.text(shapeArabicLine('كشف حساب'), pageLeft, y, { width: fullWidth, align: 'right' })
-    y += 26 // title line height + small gap, independent of body font size
+    doc.fontSize(22)
+    doc.text(shapeArabicLine('كشف حساب'), pageLeft, y, {
+      width: fullWidth,
+      align: 'right'
+    })
+
+    y += 30
 
     const entryDate = new Date(resumeBalance.createdAt)
     const formattedDate = `${entryDate.getFullYear()}/${String(entryDate.getMonth() + 1).padStart(2, '0')}/${String(entryDate.getDate()).padStart(2, '0')}`
 
-    doc.fontSize(10)
+    doc.fontSize(11)
     doc.text(shapeArabicLine('التاريخ'), pageLeft + fullWidth - 100, y, {
       width: 100,
       align: 'right'
     })
     doc.text(formattedDate, pageLeft, y, { width: fullWidth - 106, align: 'right' })
-    y += 20
+    y += 22
 
     // ---- Side-by-side row: summary box (left) | client info (right) -------
 
-    const SUMMARY_BOX_WIDTH = 220
-    const SUMMARY_VALUE_COL_WIDTH = 85
+    const SUMMARY_BOX_WIDTH = Math.floor((fullWidth - COLUMN_GAP) * 0.48)
+    const SUMMARY_VALUE_COL_WIDTH = 65
     const SUMMARY_LABEL_COL_WIDTH = SUMMARY_BOX_WIDTH - SUMMARY_VALUE_COL_WIDTH
-    const SUMMARY_ROW_HEIGHT = 16
-    const SUMMARY_TITLE_HEIGHT = 16
-    const SUMMARY_PADDING_TOP = 6
-    const SUMMARY_PADDING_BOTTOM = 6
+    const SUMMARY_ROW_HEIGHT = 20
+    const SUMMARY_TITLE_HEIGHT = 18
+    const SUMMARY_PADDING_TOP = 8
+    const SUMMARY_PADDING_BOTTOM = 8
     const summaryBoxHeight =
       SUMMARY_PADDING_TOP + SUMMARY_TITLE_HEIGHT + SUMMARY_ROW_HEIGHT * 3 + SUMMARY_PADDING_BOTTOM
 
     const clientColX = pageLeft + SUMMARY_BOX_WIDTH + COLUMN_GAP
     const clientColWidth = fullWidth - SUMMARY_BOX_WIDTH - COLUMN_GAP
 
-    const CLIENT_INFO_TITLE_HEIGHT = 16
-    const CLIENT_INFO_LINE_HEIGHT = 14
+    const CLIENT_INFO_TITLE_HEIGHT = 18
+    const CLIENT_INFO_LINE_HEIGHT = 18
     const clientInfoHeight =
       CLIENT_INFO_TITLE_HEIGHT + CLIENT_INFO_LINE_HEIGHT * (client.phone ? 2 : 1)
 
@@ -112,7 +104,7 @@ export function generateClientResumeStatementPdf(
     doc.rect(pageLeft, y, SUMMARY_BOX_WIDTH, summaryBoxHeight).lineWidth(1).stroke()
 
     let summaryY = y + SUMMARY_PADDING_TOP
-    doc.fontSize(10)
+    doc.fontSize(12)
     doc.text(shapeArabicLine('ملخص الحساب'), pageLeft, summaryY, {
       width: SUMMARY_BOX_WIDTH - 6,
       align: 'right'
@@ -125,7 +117,7 @@ export function generateClientResumeStatementPdf(
       ['الرصيد الحالي', resumeBalance.balanceAfter.toFixed(2)]
     ]
 
-    doc.fontSize(9)
+    doc.fontSize(10)
     for (const [label, value] of summaryRows) {
       doc.text(shapeArabicLine(label), pageLeft + SUMMARY_VALUE_COL_WIDTH, summaryY, {
         width: SUMMARY_LABEL_COL_WIDTH - 6,
@@ -142,14 +134,14 @@ export function generateClientResumeStatementPdf(
     // -- Client info (right) --
 
     let clientY = y
-    doc.fontSize(12)
+    doc.fontSize(14)
     doc.text(shapeArabicLine('بيانات العميل:'), clientColX, clientY, {
       width: clientColWidth,
       align: 'right'
     })
     clientY += CLIENT_INFO_TITLE_HEIGHT
 
-    doc.fontSize(11)
+    doc.fontSize(12)
     doc.text(shapeArabicLine(client.name), clientColX, clientY, {
       width: clientColWidth,
       align: 'right'
