@@ -31,7 +31,7 @@ export type Order = z.infer<typeof OrderSchema>
 const CreateOrderItemSchema = z
   .object({
     productId: z.number().int().positive(),
-    quantity: z.number().int().positive(),
+    quantity: z.number().positive(),
     priceId: z.number().int().positive().optional(),
     customUnitPrice: z.number().nonnegative().optional()
   })

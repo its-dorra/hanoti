@@ -39,9 +39,11 @@ export function OrderItemsTable({ items, subtotal, onRemove }: OrderItemsTablePr
 
               <TableCell>{item.quantity}</TableCell>
 
-              <TableCell>{formatDZD(item.unitPrice)}</TableCell>
+              <TableCell>{formatDZD(Math.trunc(item.unitPrice * 100) / 100)}</TableCell>
 
-              <TableCell>{formatDZD(item.unitPrice * item.quantity)}</TableCell>
+              <TableCell>
+                {formatDZD(Math.trunc(item.unitPrice * item.quantity * 100) / 100)}
+              </TableCell>
 
               <TableCell>
                 <Button

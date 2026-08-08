@@ -8,7 +8,7 @@ export const clients = sqliteTable(
     name: text('name').notNull(),
     phone: text('phone'),
     notes: text('notes'),
-    balance: integer('debt').notNull().default(0),
+    balance: real('debt').notNull().default(0),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -25,7 +25,7 @@ export const products = sqliteTable(
     id: integer('id').primaryKey({ autoIncrement: true }),
     name: text('name').notNull().unique(),
     buyingPrice: real('buying_price').notNull(),
-    quantity: integer('quantity').notNull().default(0),
+    quantity: real('quantity').notNull().default(0),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -84,7 +84,7 @@ export const orderItems = sqliteTable(
       .references(() => products.id),
     // Snapshots taken at order time so reprints never change retroactively.
     productNameSnapshot: text('product_name_snapshot').notNull(),
-    quantity: integer('quantity').notNull(),
+    quantity: real('quantity').notNull(),
     unitPrice: real('unit_price').notNull(),
     lineTotal: real('line_total').notNull()
   },
@@ -117,9 +117,9 @@ export const clientLedgers = sqliteTable('client_ledgers', {
     .references(() => clients.id, { onDelete: 'cascade' }),
   referenceId: integer('reference_id').notNull(),
   referenceType: text('reference_type', { enum: ['order', 'payment'] }).notNull(),
-  amount: integer('amount').notNull(),
-  balanceBefore: integer('balance_before').notNull(),
-  balanceAfter: integer('balance_after').notNull(),
+  amount: real('amount').notNull(),
+  balanceBefore: real('balance_before').notNull(),
+  balanceAfter: real('balance_after').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`)

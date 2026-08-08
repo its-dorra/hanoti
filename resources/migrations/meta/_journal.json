@@ -50,6 +50,13 @@
       "when": 1785407234111,
       "tag": "0006_hesitant_justin_hammer",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1786211619950,
+      "tag": "0007_zippy_cargill",
+      "breakpoints": true
     }
   ]
 }

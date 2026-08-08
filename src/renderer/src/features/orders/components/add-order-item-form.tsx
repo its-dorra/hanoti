@@ -14,7 +14,7 @@ import {
 
 import type { OrderLineItem } from '../types'
 import { createOrderLineItemKey, resolveUnitPrice } from '../utils'
-import { Product } from 'src/shared/schemas/product.schema'
+import { Product } from '../../../../../shared/schemas/product.schema'
 import { ProductSearchSelect } from '@renderer/features/products/components/product-search-select'
 import { formatDZD } from '#lib/utils'
 
@@ -95,25 +95,25 @@ export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
 
       {product && (
         <div className="grid grid-cols-12 items-end gap-2">
-          <div className="col-span-2 space-y-1.5">
+          <div className="col-span-3 space-y-1.5">
             <Label htmlFor="order-item-quantity">الكمية</Label>
 
             <Input
               autoFocus
               id="order-item-quantity"
               type="number"
-              step={1}
+              step={0.1}
               value={quantity}
               onChange={(event) => {
                 const value = event.target.value === '' ? '' : Number(event.target.value)
 
-                setQuantity(Number.isFinite(value) ? Math.max(1, +value) : '')
+                setQuantity(Number.isFinite(value) ? Math.max(0, +value) : '')
               }}
             />
           </div>
 
           {!useCustomPrice ? (
-            <div className="col-span-5 space-y-1.5">
+            <div className="col-span-4 space-y-1.5">
               <Label>السعر</Label>
 
               <Select
@@ -121,7 +121,7 @@ export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
                 onValueChange={(value) => setPriceId(Number(value))}
                 disabled={product.prices.length === 0}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="اختر السعر" />
                 </SelectTrigger>
 
@@ -135,7 +135,7 @@ export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
               </Select>
             </div>
           ) : (
-            <div className="col-span-5 space-y-1.5">
+            <div className="col-span-4 space-y-1.5">
               <Label htmlFor="order-item-custom-price">سعر مخصص</Label>
 
               <Input
