@@ -35,7 +35,7 @@ export function OrderItemsTable({ items, subtotal, onRemove }: OrderItemsTablePr
         <TableBody>
           {items.map((item) => (
             <TableRow key={item.key}>
-              <TableCell>{item.product.name}</TableCell>
+              <TableCell>{item.productNameSnapshot}</TableCell>
 
               <TableCell>{item.quantity}</TableCell>
 

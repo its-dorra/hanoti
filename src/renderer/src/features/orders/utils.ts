@@ -1,4 +1,4 @@
-import type { Product } from 'src/shared/schemas/product.schema'
+import type { Product } from '../../../../../src/shared/schemas/product.schema'
 import type { OrderDraft, OrderDraftItem, OrderLineItem } from './types'
 
 export const ORDER_DRAFT_STORAGE_KEY = 'grocery-app:order-draft'
@@ -39,6 +39,7 @@ export function resolveDraftItems(draft: OrderDraft, products: Product[]): Order
       {
         key: createOrderLineItemKey(),
         product,
+        productNameSnapshot: draftItem.productNameSnapshot?.trim() || product.name,
         quantity: draftItem.quantity,
         priceId: draftItem.priceId,
         customUnitPrice: draftItem.customUnitPrice,
@@ -55,19 +56,23 @@ export function serializeDraft(
 ): OrderDraft {
   return {
     clientId,
-    items: items.map(({ product, quantity, priceId, customUnitPrice }): OrderDraftItem => ({
-      productId: product.id,
-      quantity,
-      ...(priceId !== undefined && { priceId }),
-      ...(customUnitPrice !== undefined && { customUnitPrice })
-    })),
+    items: items.map(
+      ({ product, productNameSnapshot, quantity, priceId, customUnitPrice }): OrderDraftItem => ({
+        productId: product.id,
+        productNameSnapshot,
+        quantity,
+        ...(priceId !== undefined && { priceId }),
+        ...(customUnitPrice !== undefined && { customUnitPrice })
+      })
+    ),
     depositAmount
   }
 }
 
 export function mapOrderItemsForSubmission(items: OrderLineItem[]) {
-  return items.map(({ product, quantity, priceId, customUnitPrice }) => ({
+  return items.map(({ product, productNameSnapshot, quantity, priceId, customUnitPrice }) => ({
     productId: product.id,
+    productNameSnapshot,
     quantity,
     ...(customUnitPrice !== undefined ? { customUnitPrice } : { priceId })
   }))

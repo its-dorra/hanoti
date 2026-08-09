@@ -41,7 +41,7 @@ export type Services = ReturnType<typeof createServices>
 
 /** Maps a domain TaggedError to the appropriate ORPC error shape. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function toORPCError(e: AppError): ORPCError<never, any> {
+function toORPCError(e: AppError): ORPCError<any, any> {
   switch (e._tag) {
     case 'ClientNotFoundError':
     case 'ProductNotFoundError':

@@ -104,7 +104,7 @@ export class OrdersService {
 
       resolved.push({
         productId: item.productId,
-        productNameSnapshot: product.name,
+        productNameSnapshot: item.productNameSnapshot?.trim() || product.name,
         quantity: item.quantity,
         unitPrice,
         lineTotal: unitPrice * item.quantity

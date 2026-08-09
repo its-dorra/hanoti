@@ -23,13 +23,13 @@ export function RecordPaymentDialog(props: RecordPaymentDialogProps) {
 
   const form = useForm({
     defaultValues: {
-      amount: 0,
+      amount: '' as '' | number,
       note: ''
     },
     onSubmit: async ({ value }) => {
       await recordPayment.mutateAsync({
         clientId: props.clientId,
-        amount: value.amount,
+        amount: +value.amount,
         note: value.note || null
       })
 
@@ -59,7 +59,7 @@ export function RecordPaymentDialog(props: RecordPaymentDialogProps) {
           <form.Field
             name="amount"
             validators={{
-              onChange: ({ value }) => (value <= 0 ? 'يجب أن يكون المبلغ أكبر من 0' : undefined)
+              onChange: ({ value }) => (+value <= 0 ? 'يجب أن يكون المبلغ أكبر من 0' : undefined)
             }}
           >
             {(field) => (
@@ -70,7 +70,9 @@ export function RecordPaymentDialog(props: RecordPaymentDialogProps) {
                   type="number"
                   step="0.01"
                   value={field.state.value}
-                  onChange={(e) => field.handleChange(Number(e.target.value))}
+                  onChange={(e) =>
+                    field.handleChange(e.target.value === '' ? '' : Number(e.target.value))
+                  }
                 />
                 {field.state.meta.errors.length > 0 && (
                   <p className="text-xs text-destructive">{field.state.meta.errors[0]}</p>

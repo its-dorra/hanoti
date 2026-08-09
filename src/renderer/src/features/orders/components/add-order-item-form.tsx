@@ -25,6 +25,7 @@ interface AddOrderItemFormProps {
 
 export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
   const [product, setProduct] = React.useState<Product>()
+  const [productNameSnapshot, setProductNameSnapshot] = React.useState('')
 
   const [quantity, setQuantity] = React.useState<number | ''>('')
   const [priceId, setPriceId] = React.useState<number>()
@@ -33,6 +34,7 @@ export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
 
   const reset = React.useCallback(() => {
     setProduct(undefined)
+    setProductNameSnapshot('')
     setQuantity('')
     setPriceId(undefined)
     setUseCustomPrice(false)
@@ -41,6 +43,7 @@ export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
 
   const handleProductSelect = React.useCallback((nextProduct: Product) => {
     setProduct(nextProduct)
+    setProductNameSnapshot(nextProduct.name)
     setPriceId(nextProduct.prices[0]?.id)
     setUseCustomPrice(false)
   }, [])
@@ -69,6 +72,7 @@ export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
     onAdd({
       key: createOrderLineItemKey(),
       product,
+      productNameSnapshot: productNameSnapshot.trim() || product.name,
       quantity: +quantity,
       priceId: useCustomPrice ? undefined : priceId,
       customUnitPrice: useCustomPrice ? customPrice : undefined,
@@ -94,80 +98,93 @@ export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
       />
 
       {product && (
-        <div className="grid grid-cols-12 items-end gap-2">
-          <div className="col-span-3 space-y-1.5">
-            <Label htmlFor="order-item-quantity">الكمية</Label>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="order-item-product-name">اسم المنتج</Label>
 
             <Input
-              autoFocus
-              id="order-item-quantity"
-              type="number"
-              step={0.1}
-              value={quantity}
-              onChange={(event) => {
-                const value = event.target.value === '' ? '' : Number(event.target.value)
-
-                setQuantity(Number.isFinite(value) ? Math.max(0, +value) : '')
-              }}
+              id="order-item-product-name"
+              type="text"
+              value={productNameSnapshot}
+              onChange={(event) => setProductNameSnapshot(event.target.value)}
             />
           </div>
 
-          {!useCustomPrice ? (
-            <div className="col-span-4 space-y-1.5">
-              <Label>السعر</Label>
-
-              <Select
-                value={priceId !== undefined ? String(priceId) : undefined}
-                onValueChange={(value) => setPriceId(Number(value))}
-                disabled={product.prices.length === 0}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="اختر السعر" />
-                </SelectTrigger>
-
-                <SelectContent>
-                  {product.prices.map((price) => (
-                    <SelectItem key={price.id} value={String(price.id)}>
-                      {formatDZD(price.amount)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <div className="col-span-4 space-y-1.5">
-              <Label htmlFor="order-item-custom-price">سعر مخصص</Label>
+          <div className="grid grid-cols-12 items-end gap-2">
+            <div className="col-span-3 space-y-1.5">
+              <Label htmlFor="order-item-quantity">الكمية</Label>
 
               <Input
-                id="order-item-custom-price"
+                autoFocus
+                id="order-item-quantity"
                 type="number"
-                min={0}
-                step="0.01"
-                value={customPrice}
+                step={0.1}
+                value={quantity}
                 onChange={(event) => {
-                  const value = Number(event.target.value)
+                  const value = event.target.value === '' ? '' : Number(event.target.value)
 
-                  setCustomPrice(Number.isFinite(value) ? Math.max(0, value) : 0)
+                  setQuantity(Number.isFinite(value) ? Math.max(0, +value) : '')
                 }}
               />
             </div>
-          )}
 
-          <div className="col-span-3">
-            <button
-              type="button"
-              className="text-xs text-muted-foreground underline"
-              onClick={() => setUseCustomPrice((value) => !value)}
-            >
-              {useCustomPrice ? 'استخدام قائمة الأسعار' : 'سعر مخصص'}
-            </button>
-          </div>
+            {!useCustomPrice ? (
+              <div className="col-span-4 space-y-1.5">
+                <Label>السعر</Label>
 
-          <div className="col-span-2">
-            <Button type="submit" className="w-full" disabled={!canAdd}>
-              <Plus className="h-4 w-4" />
-              إضافة
-            </Button>
+                <Select
+                  value={priceId !== undefined ? String(priceId) : undefined}
+                  onValueChange={(value) => setPriceId(Number(value))}
+                  disabled={product.prices.length === 0}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="اختر السعر" />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    {product.prices.map((price) => (
+                      <SelectItem key={price.id} value={String(price.id)}>
+                        {formatDZD(price.amount)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="col-span-4 space-y-1.5">
+                <Label htmlFor="order-item-custom-price">سعر مخصص</Label>
+
+                <Input
+                  id="order-item-custom-price"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={customPrice}
+                  onChange={(event) => {
+                    const value = Number(event.target.value)
+
+                    setCustomPrice(Number.isFinite(value) ? Math.max(0, value) : 0)
+                  }}
+                />
+              </div>
+            )}
+
+            <div className="col-span-3">
+              <button
+                type="button"
+                className="text-xs text-muted-foreground underline"
+                onClick={() => setUseCustomPrice((value) => !value)}
+              >
+                {useCustomPrice ? 'استخدام قائمة الأسعار' : 'سعر مخصص'}
+              </button>
+            </div>
+
+            <div className="col-span-2">
+              <Button type="submit" className="w-full" disabled={!canAdd}>
+                <Plus className="h-4 w-4" />
+                إضافة
+              </Button>
+            </div>
           </div>
         </div>
       )}
