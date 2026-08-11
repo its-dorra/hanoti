@@ -105,6 +105,7 @@ export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
             <Input
               id="order-item-product-name"
               type="text"
+              defaultValue={product.name}
               value={productNameSnapshot}
               onChange={(event) => setProductNameSnapshot(event.target.value)}
             />
