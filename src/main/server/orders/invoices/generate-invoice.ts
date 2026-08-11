@@ -107,27 +107,16 @@ export function generateInvoicePdf(
     function drawInvoiceInfo(y: number): number {
       const INFO_LABEL_WIDTH = 90
       const INFO_VALUE_WIDTH = fullWidth - INFO_LABEL_WIDTH
-      const INFO_ROW_HEIGHT = 20
-      let currentY = y
-      doc.fontSize(20)
-      doc.text(shapeArabicLine('رقم الفاتورة'), pageLeft + INFO_VALUE_WIDTH, currentY, {
-        width: INFO_LABEL_WIDTH,
-        align: 'right'
-      })
-      doc.text(order.id.toString().slice(0, 10), pageLeft, currentY, {
-        width: INFO_VALUE_WIDTH,
-        align: 'right'
-      })
-      currentY += INFO_ROW_HEIGHT + 10
+      // const INFO_ROW_HEIGHT = 20
       const orderDate = new Date(order.orderDate)
       const formattedDate = `${orderDate.getFullYear()}/${String(orderDate.getMonth() + 1).padStart(2, '0')}/${String(orderDate.getDate()).padStart(2, '0')}`
       doc.fontSize(10)
-      doc.text(shapeArabicLine('التاريخ'), pageLeft + INFO_VALUE_WIDTH, currentY, {
+      doc.text(shapeArabicLine('التاريخ'), pageLeft + INFO_VALUE_WIDTH, y, {
         width: INFO_LABEL_WIDTH,
         align: 'right'
       })
-      doc.text(formattedDate, pageLeft, currentY, { width: INFO_VALUE_WIDTH, align: 'right' })
-      return currentY + INFO_ROW_HEIGHT
+      doc.text(formattedDate, pageLeft, y, { width: INFO_VALUE_WIDTH, align: 'right' })
+      return y
     }
 
     function startPlainContinuationPage(): number {
@@ -147,19 +136,14 @@ export function generateInvoicePdf(
     doc.moveDown()
 
     doc.fontSize(12)
-    doc.text(shapeArabicLine('بيانات العميل:'), pageLeft, doc.y, {
+    doc.text(shapeArabicLine(`بيانات العميل: ${client.name}`), pageLeft, doc.y, {
       width: fullWidth,
       align: 'right'
     })
-    doc.fontSize(11)
-    doc.text(shapeArabicLine(client.name), pageLeft, doc.y, { width: fullWidth, align: 'right' })
     if (client.phone)
       doc.text(shapeArabicLine(client.phone), pageLeft, doc.y, { width: fullWidth, align: 'right' })
 
-    doc.moveDown()
-
-    // ---- Item table (page-break-aware, RTL column order) -------------------
-    // Columns: Product name | Quantity | Unit price | Quantity × Unit price
+    // doc.moveDown()
 
     let y = drawTableHeader(doc.y)
 
