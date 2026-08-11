@@ -11,19 +11,27 @@ interface ProductSearchSelectProps {
   onSelect: (product: Product) => void
   onClear: () => void
   items: OrderLineItem[]
+  ref: React.Ref<{ focus: () => void }>
 }
 
 export function ProductSearchSelect({
   selectedProduct,
   onSelect,
   onClear,
-  items
+  items,
+  ref
 }: ProductSearchSelectProps) {
   const [query, setQuery] = React.useState('')
   const [highlightedIndex, setHighlightedIndex] = React.useState(-1)
 
   const inputRef = React.useRef<HTMLInputElement>(null)
   const optionRefs = React.useRef<Record<string, HTMLButtonElement | null>>({})
+
+  // React.useImperativeHandle(ref, () => ({
+  //   focus: () => {
+  //     inputRef.current?.focus()
+  //   }
+  // }))
 
   const { data: products, isLoading } = useQuery(
     orpc.products.list.queryOptions({
@@ -40,6 +48,12 @@ export function ProductSearchSelect({
 
     return products.filter((product) => !selectedProductIds.has(product.id))
   }, [products, items])
+
+  React.useEffect(() => {
+    if (!selectedProduct) {
+      inputRef.current?.focus()
+    }
+  }, [selectedProduct])
 
   React.useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -80,11 +94,6 @@ export function ProductSearchSelect({
 
       setQuery('')
       setHighlightedIndex(-1)
-
-      // Keep the input focused so another product can be selected immediately.
-      requestAnimationFrame(() => {
-        inputRef.current?.focus()
-      })
     },
     [filteredProducts, onSelect]
   )

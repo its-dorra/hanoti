@@ -26,6 +26,7 @@ interface AddOrderItemFormProps {
 export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
   const [product, setProduct] = React.useState<Product>()
   const [productNameSnapshot, setProductNameSnapshot] = React.useState('')
+  const productSearchSelectRef = React.useRef<{ focus: () => void }>(null)
 
   const [quantity, setQuantity] = React.useState<number | ''>('')
   const [priceId, setPriceId] = React.useState<number>()
@@ -80,6 +81,8 @@ export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
     })
 
     reset()
+
+    productSearchSelectRef.current?.focus()
   }
 
   return (
@@ -95,6 +98,7 @@ export function AddOrderItemForm({ items, onAdd }: AddOrderItemFormProps) {
         selectedProduct={product}
         onSelect={handleProductSelect}
         onClear={reset}
+        ref={productSearchSelectRef}
       />
 
       {product && (
