@@ -18,7 +18,7 @@ interface ClientsPresenterProps {
   isLoading: boolean
   isFetchingNextPage: boolean
   hasNextPage: boolean
-  loadMoreRef: React.RefObject<HTMLTableRowElement>
+  loadMoreRef: React.RefObject<HTMLTableRowElement | null>
   searchQuery: string
   onSearchChange: (query: string) => void
   onCreateClick: () => void

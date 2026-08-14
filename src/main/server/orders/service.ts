@@ -15,7 +15,8 @@ import type {
   CreateOrderInput,
   Order,
   OrderFilterInput,
-  PaginatedOrders
+  PaginatedOrders,
+  UpdateOrderInput
 } from '../../../shared/schemas/order.schema'
 import { ClientLedgersService } from '../ledgers/service'
 
@@ -225,6 +226,86 @@ export class OrdersService {
         return Result.err(thrown as unknown as AppError)
       }
       return Result.err(new DatabaseError({ message: 'Failed to delete order', cause: thrown }))
+    }
+  }
+
+  async updateOrder(input: UpdateOrderInput): Promise<Result<Order, AppError>> {
+    if (!input.items || input.items.length === 0) {
+      return Result.err(new EmptyOrderError({}))
+    }
+
+    const existingResult = await this.getById(input.id)
+    if (existingResult.isErr()) return Result.err(existingResult.error)
+    const existingOrder = existingResult.value
+
+    const resolvedResult = await this.resolveItems(input.items)
+    if (resolvedResult.isErr()) return Result.err(resolvedResult.error)
+    const resolvedItems = resolvedResult.value
+
+    const newSubtotal = resolvedItems.reduce((sum, i) => sum + i.lineTotal, 0)
+    const oldSubtotal = existingOrder.subtotal
+    const delta = newSubtotal - oldSubtotal
+
+    try {
+      const updatedOrder = await this.db.transaction(async (tx) => {
+        const appTx = tx
+
+        // 1. Restore stock consumed by the existing order items
+        for (const oldItem of existingOrder.items) {
+          const restoreResult = await this.productsService.reserveStockForOrder(
+            appTx,
+            oldItem.productId,
+            -oldItem.quantity // restore stock
+          )
+          if (restoreResult.isErr()) throw restoreResult.error
+        }
+
+        // 2. Deduct stock for the new order items
+        for (const newItem of resolvedItems) {
+          const reserveResult = await this.productsService.reserveStockForOrder(
+            appTx,
+            newItem.productId,
+            newItem.quantity // deduct stock
+          )
+          if (reserveResult.isErr()) throw reserveResult.error
+        }
+
+        // 3. Replace items in order_items and update order subtotal
+        await this.dataAccess.replaceItems(appTx, input.id, resolvedItems, newSubtotal)
+
+        // 4. Update the order's ledger entry and cascade the debt difference to all subsequent ledger entries
+        const ledgerResult = await this.ledgersService.updateOrderLedgerAndCascade(
+          appTx,
+          existingOrder.clientId,
+          existingOrder.id,
+          newSubtotal,
+          delta
+        )
+        if (ledgerResult.isErr()) throw ledgerResult.error
+
+        // 5. Update client's balance if subtotal changed
+        if (delta !== 0) {
+          const debtResult = await this.clientsService.adjustDebt(
+            appTx,
+            existingOrder.clientId,
+            delta
+          )
+          if (debtResult.isErr()) throw debtResult.error
+        }
+
+        const freshOrder = await this.dataAccess.findByIdWithItems(input.id)
+        if (!freshOrder) {
+          throw new OrderNotFoundError({ orderId: input.id })
+        }
+        return freshOrder
+      })
+
+      return Result.ok(updatedOrder)
+    } catch (thrown) {
+      if (thrown && typeof thrown === 'object' && 'tag' in thrown) {
+        return Result.err(thrown as unknown as AppError)
+      }
+      return Result.err(new DatabaseError({ message: 'Failed to update order', cause: thrown }))
     }
   }
 }

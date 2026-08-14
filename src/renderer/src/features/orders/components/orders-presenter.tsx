@@ -4,7 +4,7 @@ import { Button } from '#components/ui/button'
 import { Input } from '#components/ui/input'
 import { Skeleton } from '#components/ui/skeleton'
 
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Pencil } from 'lucide-react'
 import { formatDZD } from '@/lib/utils'
 import type { Order } from '../../../../../shared/schemas/order.schema'
 
@@ -91,7 +91,7 @@ export function OrdersPresenter({
               <TableHead>العميل</TableHead>
               <TableHead>التاريخ</TableHead>
               <TableHead>الإجمالي</TableHead>
-              <TableHead className="w-16 text-end">طباعة</TableHead>
+              <TableHead className="w-24 text-end">الإجراءات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -129,7 +129,17 @@ export function OrdersPresenter({
                     <TableCell>{formatDZD(order.subtotal)}</TableCell>
 
                     <TableCell className="text-end">
-                      <PrintOrderDialog orderId={order.id} createdAt={order.orderDate} />
+                      <div className="flex items-center justify-end gap-1">
+                        <Button asChild variant="ghost" size="icon" title="تعديل الطلب">
+                          <Link
+                            to="/orders/$orderId/edit"
+                            params={{ orderId: String(order.id) }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <PrintOrderDialog orderId={order.id} createdAt={order.orderDate} />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

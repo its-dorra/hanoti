@@ -77,6 +77,6 @@ export type PaginatedOrders = z.infer<typeof PaginatedOrdersSchema>
 
 export const UpdateOrderSchema = z.object({
   id: z.number().int().positive(),
-  items: z.array(CreateOrderItemSchema).optional()
+  items: z.array(CreateOrderItemSchema).min(1, 'Order must have at least one item')
 })
 export type UpdateOrderInput = z.infer<typeof UpdateOrderSchema>

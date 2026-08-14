@@ -17,6 +17,7 @@ import { Route as ClientsIndexRouteImport } from './routes/clients/index'
 import { Route as OrdersNewRouteImport } from './routes/orders/new'
 import { Route as DebtNotebookDebtEntryIdRouteImport } from './routes/debt-notebook/$debtEntryId'
 import { Route as ClientsClientIdIndexRouteImport } from './routes/clients/$clientId.index'
+import { Route as OrdersOrderIdEditRouteImport } from './routes/orders/$orderId.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +59,11 @@ const ClientsClientIdIndexRoute = ClientsClientIdIndexRouteImport.update({
   path: '/clients/$clientId/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrdersOrderIdEditRoute = OrdersOrderIdEditRouteImport.update({
+  id: '/orders/$orderId/edit',
+  path: '/orders/$orderId/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/debt-notebook/': typeof DebtNotebookIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/orders/$orderId/edit': typeof OrdersOrderIdEditRoute
   '/clients/$clientId/': typeof ClientsClientIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/debt-notebook': typeof DebtNotebookIndexRoute
   '/orders': typeof OrdersIndexRoute
   '/products': typeof ProductsIndexRoute
+  '/orders/$orderId/edit': typeof OrdersOrderIdEditRoute
   '/clients/$clientId': typeof ClientsClientIdIndexRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/debt-notebook/': typeof DebtNotebookIndexRoute
   '/orders/': typeof OrdersIndexRoute
   '/products/': typeof ProductsIndexRoute
+  '/orders/$orderId/edit': typeof OrdersOrderIdEditRoute
   '/clients/$clientId/': typeof ClientsClientIdIndexRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/debt-notebook/'
     | '/orders/'
     | '/products/'
+    | '/orders/$orderId/edit'
     | '/clients/$clientId/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/debt-notebook'
     | '/orders'
     | '/products'
+    | '/orders/$orderId/edit'
     | '/clients/$clientId'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/debt-notebook/'
     | '/orders/'
     | '/products/'
+    | '/orders/$orderId/edit'
     | '/clients/$clientId/'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   DebtNotebookIndexRoute: typeof DebtNotebookIndexRoute
   OrdersIndexRoute: typeof OrdersIndexRoute
   ProductsIndexRoute: typeof ProductsIndexRoute
+  OrdersOrderIdEditRoute: typeof OrdersOrderIdEditRoute
   ClientsClientIdIndexRoute: typeof ClientsClientIdIndexRoute
 }
 
@@ -192,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientsClientIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/orders/$orderId/edit': {
+      id: '/orders/$orderId/edit'
+      path: '/orders/$orderId/edit'
+      fullPath: '/orders/$orderId/edit'
+      preLoaderRoute: typeof OrdersOrderIdEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   DebtNotebookIndexRoute: DebtNotebookIndexRoute,
   OrdersIndexRoute: OrdersIndexRoute,
   ProductsIndexRoute: ProductsIndexRoute,
+  OrdersOrderIdEditRoute: OrdersOrderIdEditRoute,
   ClientsClientIdIndexRoute: ClientsClientIdIndexRoute,
 }
 export const routeTree = rootRouteImport

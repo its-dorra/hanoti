@@ -20,7 +20,7 @@ import {
   SelectItem
 } from '../../../components/ui/select'
 import { useCreateOrder } from '../hooks/use-create-order'
-import { formatCurrency } from '../../../lib/utils'
+import { formatDZD } from '../../../lib/utils'
 import { orpc } from '@renderer/integrations/orpc'
 
 interface CreateOrderDialogProps {
@@ -275,7 +275,7 @@ export function CreateOrderDialog({ open, onOpenChange, defaultClientId }: Creat
                                         <SelectContent>
                                           {selectedProduct?.prices.map((price) => (
                                             <SelectItem key={price.id} value={String(price.id)}>
-                                              {formatCurrency(price.amount)}
+                                              {formatDZD(price.amount)}
                                             </SelectItem>
                                           ))}
                                         </SelectContent>

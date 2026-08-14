@@ -1,6 +1,6 @@
 import { AppDb, AppTransaction } from '../../db/client'
 import { clientLedgers } from '../../db/schema'
-import { and, desc, eq, lt, lte, or } from 'drizzle-orm'
+import { and, desc, eq, gt, lt, lte, or, sql } from 'drizzle-orm'
 import { endOfDay } from '../../lib/utils'
 import { LedgerEntry } from './types'
 
@@ -127,5 +127,70 @@ export class LedgersDataAccess {
     await tx.delete(clientLedgers).where(eq(clientLedgers.id, lastLedger.id))
 
     return lastLedger
+  }
+
+  async findLedgerByReference(
+    tx: AppTransaction | AppDb,
+    clientId: number,
+    referenceId: number,
+    referenceType: (typeof clientLedgers.$inferSelect)['referenceType']
+  ) {
+    const [row] = await tx
+      .select()
+      .from(clientLedgers)
+      .where(
+        and(
+          eq(clientLedgers.clientId, clientId),
+          eq(clientLedgers.referenceId, referenceId),
+          eq(clientLedgers.referenceType, referenceType)
+        )
+      )
+      .limit(1)
+
+    return row ?? null
+  }
+
+  async updateLedgerEntry(
+    tx: AppTransaction,
+    id: number,
+    data: {
+      amount?: number
+      balanceBefore?: number
+      balanceAfter?: number
+    }
+  ) {
+    const [row] = await tx
+      .update(clientLedgers)
+      .set(data)
+      .where(eq(clientLedgers.id, id))
+      .returning()
+    return row
+  }
+
+  async updateSubsequentLedgers(
+    tx: AppTransaction,
+    clientId: number,
+    afterCreatedAt: Date,
+    afterId: number,
+    delta: number
+  ) {
+    await tx
+      .update(clientLedgers)
+      .set({
+        balanceBefore: sql`${clientLedgers.balanceBefore} + ${delta}`,
+        balanceAfter: sql`${clientLedgers.balanceAfter} + ${delta}`
+      })
+      .where(
+        and(
+          eq(clientLedgers.clientId, clientId),
+          or(
+            gt(clientLedgers.createdAt, afterCreatedAt),
+            and(
+              eq(clientLedgers.createdAt, afterCreatedAt),
+              gt(clientLedgers.id, afterId)
+            )
+          )
+        )
+      )
   }
 }

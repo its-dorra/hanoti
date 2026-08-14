@@ -1,4 +1,4 @@
-import type { Client, CreateClientInput } from '../../../shared/schemas/client.schema'
+import type { Client, CreateClientInput } from '../../../../shared/schemas/client.schema'
 
 export type { Client, CreateClientInput }
 

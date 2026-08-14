@@ -1,6 +1,9 @@
 import { RefObject } from 'react'
+import { Link } from '@tanstack/react-router'
+import { Pencil } from 'lucide-react'
 import { LedgerEntry } from '../types'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '#components/ui/table'
+import { Button } from '#components/ui/button'
 import { formatDZD } from '#lib/utils'
 import PrintOrderDialog from './print-order-dialog'
 
@@ -48,10 +51,24 @@ export default function LedgersPresenter({
                     {ledger.createdAt.toLocaleDateString('fr')} -{' '}
                     {ledger.createdAt.toLocaleTimeString('fr')}
                   </TableCell>
-                  <TableCell className="text-end"></TableCell>
-                  {ledger.referenceType === 'order' && (
-                    <PrintOrderDialog orderId={ledger.referenceId} createdAt={ledger.createdAt} />
-                  )}
+                  <TableCell className="text-end">
+                    {ledger.referenceType === 'order' && (
+                      <div className="flex items-center justify-end gap-1">
+                        <Button asChild variant="ghost" size="icon" title="تعديل الطلب">
+                          <Link
+                            to="/orders/$orderId/edit"
+                            params={{ orderId: String(ledger.referenceId) }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <PrintOrderDialog
+                          orderId={ledger.referenceId}
+                          createdAt={ledger.createdAt}
+                        />
+                      </div>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
               {hasNextPage && <div ref={loadMoreRef} />}

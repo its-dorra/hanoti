@@ -134,4 +134,50 @@ export class ClientLedgersService {
       return Result.err(new DatabaseError({ message: 'Failed to get resume balance', cause: e }))
     }
   }
+
+  async updateOrderLedgerAndCascade(
+    tx: AppTransaction,
+    clientId: number,
+    orderId: number,
+    newSubtotal: number,
+    delta: number
+  ): Promise<Result<void, AppError>> {
+    try {
+      const orderLedger = await this.dataAccess.findLedgerByReference(
+        tx,
+        clientId,
+        orderId,
+        'order'
+      )
+      if (!orderLedger) {
+        return Result.err(
+          new DatabaseError({
+            message: `Ledger entry for order ${orderId} not found`
+          })
+        )
+      }
+
+      const newBalanceAfter = orderLedger.balanceBefore + newSubtotal
+      await this.dataAccess.updateLedgerEntry(tx, orderLedger.id, {
+        amount: newSubtotal,
+        balanceAfter: newBalanceAfter
+      })
+
+      if (delta !== 0) {
+        await this.dataAccess.updateSubsequentLedgers(
+          tx,
+          clientId,
+          orderLedger.createdAt,
+          orderLedger.id,
+          delta
+        )
+      }
+
+      return Result.ok(undefined)
+    } catch (cause) {
+      return Result.err(
+        new DatabaseError({ message: 'Failed to update ledger entries for order', cause })
+      )
+    }
+  }
 }
