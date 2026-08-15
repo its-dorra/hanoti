@@ -230,7 +230,7 @@ export class OrdersService {
   }
 
   async updateOrder(input: UpdateOrderInput): Promise<Result<Order, AppError>> {
-    if (!input.items || input.items.length === 0) {
+    if (input.items.length === 0) {
       return Result.err(new EmptyOrderError({}))
     }
 

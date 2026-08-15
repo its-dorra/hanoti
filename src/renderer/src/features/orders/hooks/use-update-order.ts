@@ -7,10 +7,8 @@ export function useUpdateOrder() {
   return useMutation(
     orpc.orders.update.mutationOptions({
       onSuccess: (data) => {
+        queryClient.setQueryData(orpc.orders.getById.key({ input: { id: data.id } }), data)
         queryClient.invalidateQueries({ queryKey: orpc.orders.key(), exact: false })
-        queryClient.invalidateQueries({
-          queryKey: orpc.orders.getById.key({ input: { id: data.id } })
-        })
         queryClient.invalidateQueries({ queryKey: orpc.products.key() })
         queryClient.invalidateQueries({ queryKey: orpc.clients.key() })
         queryClient.invalidateQueries({

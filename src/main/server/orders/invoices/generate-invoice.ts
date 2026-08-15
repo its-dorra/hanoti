@@ -86,14 +86,14 @@ export function generateInvoicePdf(
       doc.moveTo(COL.total.x, ruleY).lineTo(pageRight, ruleY).lineWidth(1).stroke()
 
       doc.fontSize(10)
-      return ruleY + 8
+      return ruleY + 4
     }
 
     /** Wraps + shapes the product name and returns its visual lines plus the row height they need. */
     function layoutProductName(name: string): { lines: string[]; height: number } {
       doc.fontSize(10)
       const lines = wrapAndShapeArabic(measureWidth, name, COL.product.width)
-      const height = Math.max(ROW_MIN_HEIGHT, lines.length * LINE_HEIGHT + ROW_PADDING_Y) - 5
+      const height = Math.max(ROW_MIN_HEIGHT, lines.length * LINE_HEIGHT + ROW_PADDING_Y) - 6
       return { lines, height }
     }
 
@@ -140,10 +140,11 @@ export function generateInvoicePdf(
       width: fullWidth,
       align: 'right'
     })
-    if (client.phone)
-      doc.text(shapeArabicLine(client.phone), pageLeft, doc.y, { width: fullWidth, align: 'right' })
-
-    // doc.moveDown()
+    // if (client.phone)
+    //   doc.text(shapeArabicLine(`رقم الهاتف: ${client.phone}`), pageLeft, doc.y, {
+    //     width: fullWidth,
+    //     align: 'right'
+    //   })
 
     let y = drawTableHeader(doc.y)
 
@@ -178,9 +179,9 @@ export function generateInvoicePdf(
       const SUMMARY_BOX_WIDTH = 170
       const SUMMARY_VALUE_COL_WIDTH = 70
       const SUMMARY_LABEL_COL_WIDTH = 100
-      const SUMMARY_ROW_HEIGHT = 17
-      const SUMMARY_TITLE_HEIGHT = 17
-      const SUMMARY_PADDING = 4
+      const SUMMARY_ROW_HEIGHT = 15
+      const SUMMARY_TITLE_HEIGHT = 15
+      const SUMMARY_PADDING = 2
       const summaryBoxHeight = SUMMARY_TITLE_HEIGHT + SUMMARY_ROW_HEIGHT * 4 + SUMMARY_PADDING
 
       if (y + summaryBoxHeight > bottomLimit) {
@@ -205,7 +206,7 @@ export function generateInvoicePdf(
         ['الإجمالي', order.subtotal.toFixed(2)],
         [
           'الديون السابقة',
-          resumeBalance.createdAt > new Date(order.updatedAt.getTime() + 5 * 60 * 60 * 1000)
+          resumeBalance.createdAt > new Date(order.createdAt.getTime() + 5 * 60 * 60 * 1000)
             ? resumeBalance.balanceBefore.toFixed(2)
             : (resumeBalance.balanceBefore - order.subtotal).toFixed(2)
         ],
@@ -233,9 +234,9 @@ export function generateInvoicePdf(
       const SUMMARY_BOX_WIDTH = 170
       const SUMMARY_VALUE_COL_WIDTH = 70
       const SUMMARY_LABEL_COL_WIDTH = 100
-      const SUMMARY_ROW_HEIGHT = 20
-      const SUMMARY_TITLE_HEIGHT = 20
-      const SUMMARY_PADDING = 10
+      const SUMMARY_ROW_HEIGHT = 15
+      const SUMMARY_TITLE_HEIGHT = 15
+      const SUMMARY_PADDING = 2
       const summaryBoxHeight = SUMMARY_TITLE_HEIGHT + SUMMARY_ROW_HEIGHT + SUMMARY_PADDING
 
       if (y + summaryBoxHeight > bottomLimit) {
