@@ -40,10 +40,11 @@ export class LedgersDataAccess {
 
   async getResumeBalanceByDate(clientId: number, date: Date) {
     let ledger = await this.db.query.clientLedgers.findFirst({
-      where: (clientLedgers, { eq, lte, and }) =>
+      where: (clientLedgers, { eq, lte, and, gte }) =>
         and(
           eq(clientLedgers.clientId, clientId),
           lte(clientLedgers.createdAt, endOfDay(date)),
+          gte(clientLedgers.createdAt, date),
           eq(clientLedgers.referenceType, 'payment')
         ),
       orderBy: (clientLedgers, { desc }) => [desc(clientLedgers.createdAt), desc(clientLedgers.id)]
@@ -51,8 +52,12 @@ export class LedgersDataAccess {
 
     if (!ledger) {
       const lastLedger = await this.db.query.clientLedgers.findFirst({
-        where: (clientLedgers, { eq, and, lte }) =>
-          and(eq(clientLedgers.clientId, clientId), lte(clientLedgers.createdAt, endOfDay(date))),
+        where: (clientLedgers, { eq, and, lte, gte }) =>
+          and(
+            eq(clientLedgers.clientId, clientId),
+            lte(clientLedgers.createdAt, endOfDay(date)),
+            gte(clientLedgers.createdAt, date)
+          ),
         orderBy: (clientLedgers, { desc }) => [
           desc(clientLedgers.createdAt),
           desc(clientLedgers.id)
@@ -185,10 +190,7 @@ export class LedgersDataAccess {
           eq(clientLedgers.clientId, clientId),
           or(
             gt(clientLedgers.createdAt, afterCreatedAt),
-            and(
-              eq(clientLedgers.createdAt, afterCreatedAt),
-              gt(clientLedgers.id, afterId)
-            )
+            and(eq(clientLedgers.createdAt, afterCreatedAt), gt(clientLedgers.id, afterId))
           )
         )
       )
